@@ -5541,11 +5541,11 @@ function printStudentReport() {
             const averageSubtext = document.getElementById('rc-average-subtext')?.innerText || "";
             
           const weaknessTagsHTML = document.getElementById('rc-weakness-tags')?.innerHTML || "";
-            let cadanganFokus = document.getElementById('rc-cadangan-fokus')?.innerHTML || "";
+           let cadanganFokus = document.getElementById('rc-cadangan-fokus')?.innerHTML || "";
             
-            // PENYELESAIAN MUKTAMAD: Sembunyikan notis "Menunjukkan kesalahan khusus..." dari cetakan PDF!
+            // PENYELESAIAN MUKTAMAD: Sembunyikan notis "Menunjukkan kesalahan khusus..." ATAU ayat lalai dari cetakan PDF!
             let hideFocusStyle = "";
-            if (cadanganFokus.includes("Tunjukkan Keseluruhan")) {
+            if (cadanganFokus.includes("Tunjukkan Keseluruhan") || cadanganFokus.includes("Sila lakukan latihan bacaan dengan lebih perlahan dan teliti")) {
                 hideFocusStyle = "display: none;";
             }
 
