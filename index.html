@@ -748,11 +748,14 @@
                                                     <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Sejarah Latihan & Penilaian</span>
                                                 </div>
                                                 <div class="flex items-center gap-2">
-                                                    <button onclick="deleteSelectedLogs()" id="btn-delete-selected-logs" class="hidden bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all border border-rose-200 flex items-center gap-1.5 shadow-sm">
+                                                    <button onclick="generateCustomGraph('rc')" id="btn-graph-selected-rc" class="hidden bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all border border-indigo-200 flex items-center gap-1.5 shadow-sm">
+                                                        <i class="fa-solid fa-chart-line"></i> Bina Graf
+                                                    </button>
+                                                    <button onclick="deleteSelectedLogs('rc')" id="btn-delete-selected-rc" class="hidden bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all border border-rose-200 flex items-center gap-1.5 shadow-sm">
                                                         <i class="fa-solid fa-trash-can"></i> Padam Pilihan
                                                     </button>
                                                     <button onclick="refreshCurrentStudentReport()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all flex items-center gap-1.5 shadow-sm">
-                                                        <i class="fa-solid fa-chart-column"></i> Papar Keseluruhan (3 Terkini)
+                                                        <i class="fa-solid fa-arrows-rotate"></i> Reset Keseluruhan
                                                     </button>
                                                 </div>
                                             </div>
@@ -1049,10 +1052,20 @@
 
                         <div class="space-y-3">
                             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
-                                <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Sejarah Latihan & Penilaian</span>
-                                <button onclick="renderPersonalStudentReport()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all flex items-center gap-1.5 shadow-sm">
-                                    <i class="fa-solid fa-chart-column"></i> Papar Keseluruhan (3 Terkini)
-                                </button>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block">Sejarah Latihan & Penilaian</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button onclick="generateCustomGraph('smrc')" id="btn-graph-selected-smrc" class="hidden bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all border border-indigo-200 flex items-center gap-1.5 shadow-sm">
+                                        <i class="fa-solid fa-chart-line"></i> Bina Graf
+                                    </button>
+                                    <button onclick="deleteSelectedLogs('smrc')" id="btn-delete-selected-smrc" class="hidden bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all border border-rose-200 flex items-center gap-1.5 shadow-sm">
+                                        <i class="fa-solid fa-trash-can"></i> Padam Pilihan
+                                    </button>
+                                    <button onclick="renderPersonalStudentReport()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all flex items-center gap-1.5 shadow-sm">
+                                        <i class="fa-solid fa-arrows-rotate"></i> Reset Keseluruhan
+                                    </button>
+                                </div>
                             </div>
                             <div class="divide-y divide-slate-100 bg-white border border-slate-200 rounded-2xl p-4 overflow-y-auto max-h-[350px] custom-scrollbar" id="smrc-audio-recordings-list">
                                 <!-- Senarai sejarah audio murid -->
@@ -1659,7 +1672,7 @@ async function muatTurunSkorDariSheet() {
             const guruProfile = JSON.parse(AppStorage.getItem('e_smart_eng_guru'));
             
             // PERBAIKAN MUTLAK: Menukar pembandingan kata laluan kepada rentetan teks (String) bagi mengelakkan ralat strict comparison (===) jika kata laluan di Google Sheet disimpan sebagai jenis nombor
-            if (passInput === "YBB" || passInput === "YBB7126" || (guruProfile && String(passInput).trim() === String(guruProfile.password).trim())) {
+            if (passInput === "YBB" || passInput === "YBB7120" || (guruProfile && String(passInput).trim() === String(guruProfile.password).trim())) {
                 currentActiveUser = guruProfile;
                 currentRole = "teacher";
 
@@ -2279,10 +2292,13 @@ function populateClassFilters() {
     }
 }
 
-  // --- FUNGSI PADAM PUKAL SEJARAH LATIHAN ---
-        function updateSelectedLogsCheckbox() {
-            const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
-            const btnDelete = document.getElementById('btn-delete-selected-logs');
+  // --- FUNGSI PILIHAN SEJARAH LATIHAN (GRAF & PADAM PUKAL) ---
+        function updateSelectedLogsCheckbox(prefix) {
+            const listId = prefix === 'rc' ? 'rc-audio-recordings-list' : 'smrc-audio-recordings-list';
+            const checkedBoxes = document.querySelectorAll(`#${listId} .log-checkbox:checked`);
+            const btnDelete = document.getElementById(`btn-delete-selected-${prefix}`);
+            const btnGraph = document.getElementById(`btn-graph-selected-${prefix}`);
+            
             if (btnDelete) {
                 if (checkedBoxes.length > 0) {
                     btnDelete.classList.remove('hidden');
@@ -2291,13 +2307,65 @@ function populateClassFilters() {
                     btnDelete.classList.add('hidden');
                 }
             }
+            if (btnGraph) {
+                if (checkedBoxes.length > 0) btnGraph.classList.remove('hidden');
+                else btnGraph.classList.add('hidden');
+            }
         }
 
-        function deleteSelectedLogs() {
-            const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
+        function generateCustomGraph(prefix) {
+            const listId = prefix === 'rc' ? 'rc-audio-recordings-list' : 'smrc-audio-recordings-list';
+            const checkedBoxes = document.querySelectorAll(`#${listId} .log-checkbox:checked`);
             if (checkedBoxes.length === 0) return;
             
-            // PENYELESAIAN: Panggil Kotak Modal Rasmi Aplikasi
+            if (checkedBoxes.length > 5) {
+                showToast("Sila pilih maksimum 5 sesi sahaja untuk graf perbandingan.", "error");
+                return;
+            }
+
+            // Dapatkan semua ID log dari senarai UI untuk menyemak urutan
+            const allCheckboxes = Array.from(document.querySelectorAll(`#${listId} .log-checkbox`));
+            let selectedIndexes = [];
+            
+            checkedBoxes.forEach(cb => {
+                const idx = allCheckboxes.findIndex(box => box.value === cb.value);
+                if (idx !== -1) selectedIndexes.push(idx);
+            });
+
+            selectedIndexes.sort((a, b) => a - b);
+            
+            // Semak susunan berturutan (tidak melangkau)
+            let isConsecutive = true;
+            for (let i = 0; i < selectedIndexes.length - 1; i++) {
+                if (selectedIndexes[i+1] - selectedIndexes[i] !== 1) {
+                    isConsecutive = false;
+                    break;
+                }
+            }
+
+            if (!isConsecutive) {
+                showToast("Sila pilih sesi yang berurutan (tidak melangkau) untuk membina graf.", "error");
+                return;
+            }
+
+            const selectedIds = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (prefix === 'rc') {
+                const currentIc = document.getElementById('current-viewing-student-ic').value;
+                selectStudentForReportCard(currentIc, selectedIds);
+            } else {
+                renderPersonalStudentReport(selectedIds);
+            }
+        }
+
+        let activePrefixForDelete = 'rc';
+
+        function deleteSelectedLogs(prefix) {
+            activePrefixForDelete = prefix;
+            const listId = prefix === 'rc' ? 'rc-audio-recordings-list' : 'smrc-audio-recordings-list';
+            const checkedBoxes = document.querySelectorAll(`#${listId} .log-checkbox:checked`);
+            if (checkedBoxes.length === 0) return;
+            
             const modal = document.getElementById('delete-confirm-modal');
             if (modal) {
                 const modalTitle = modal.querySelector('h3');
@@ -2317,7 +2385,8 @@ function populateClassFilters() {
         }
 
         function executeDeleteSelectedLogs() {
-            const checkedBoxes = document.querySelectorAll('.log-checkbox:checked');
+            const listId = activePrefixForDelete === 'rc' ? 'rc-audio-recordings-list' : 'smrc-audio-recordings-list';
+            const checkedBoxes = document.querySelectorAll(`#${listId} .log-checkbox:checked`);
             let logs = JSON.parse(AppStorage.getItem('e_smart_eng_logs')) || [];
             let deletedLogs = [];
             
@@ -2332,14 +2401,17 @@ function populateClassFilters() {
             AppStorage.setItem('e_smart_eng_logs', JSON.stringify(logs));
             showToast(`${deletedLogs.length} rekod berjaya dipadam! Menyegerak ke awan...`, "success");
 
-            // Padam ke Google Sheet secara perlahan (queue) supaya tak crash
             deletedLogs.forEach((log, i) => {
                 setTimeout(() => {
                     syncToGoogleSheets('SKOR LATIHAN', log, 'DELETE');
                 }, (i + 1) * 1500);
             });
             
-            refreshCurrentStudentReport();
+            if (activePrefixForDelete === 'rc') {
+                refreshCurrentStudentReport();
+            } else {
+                renderPersonalStudentReport();
+            }
             populateMonthFilters();
         }
         // ------------------------------------------
@@ -2523,8 +2595,21 @@ function deleteAudioLog(logId, studentIc) {
             }
         }
 
-        function renderSpecificWeakness(logId, prefix) {
+       function renderSpecificWeakness(logId, prefix, sessionNum = null, cleanDateStr = null) {
+            // SUNTIKAN UI: Tambah 'Highlight' Biru pada baris rekod yang diklik
+            const listContainer = document.getElementById(`${prefix}-audio-recordings-list`);
+            if (listContainer) {
+                listContainer.querySelectorAll('div[id^="log-row-"]').forEach(row => {
+                    row.classList.remove('ring-2', 'ring-indigo-500', 'bg-indigo-50');
+                });
+                const selectedRow = document.getElementById(`log-row-${prefix}-${logId}`);
+                if (selectedRow) {
+                    selectedRow.classList.add('ring-2', 'ring-indigo-500', 'bg-indigo-50');
+                }
+            }
+
             const logs = JSON.parse(AppStorage.getItem('e_smart_eng_logs')) || [];
+
             const log = logs.find(l => String(l.id) === String(logId));
             if (!log) return;
             
@@ -2580,82 +2665,80 @@ function deleteAudioLog(logId, studentIc) {
                 6: { orenMsg: "Kurang memuaskan dalam sebutan perkataan dalam karangan (Compositions):", orenFokus: "Fokus meningkatkan kelancaran membaca karangan (Compositions) serta ketepatan sebutan setiap perkataan.", merahMsg: "Masih belum menguasai sebutan perkataan dalam karangan (Compositions):", merahFokus: "Ulang latihan membaca karangan (Compositions) dengan memberi perhatian kepada sebutan setiap perkataan yang belum dikuasai." }
             };
 
-         [1, 2, 3, 4, 5, 6].forEach(lvl => {
-                if (groupedWeaknesses[lvl].sangkut.length > 0) {
-                    weaknessHTML += `
-                        <div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
-                            <div class="p-4 sm:p-5 flex flex-col gap-3">
-                                <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
-                                    <span class="uppercase tracking-wider font-extrabold text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 shrink-0">TAHAP ${lvl}</span>
-                                    <span class="leading-relaxed">${levelMessages[lvl].orenMsg}</span>
-                                </div>
-                                <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
-                                    ${groupedWeaknesses[lvl].sangkut.join('')}
-                                </div>
+            const sesiLabel = sessionNum ? `SESI ${sessionNum}` : "SESI AKTIF";
+            const topTitle = t ? t.title : "Topik";
+            const topDate = cleanDateStr ? cleanDateStr : log.date.split('T')[0];
+
+            [1, 2, 3, 4, 5, 6].forEach(lvl => {
+                if (groupedWeaknesses[lvl].sangkut.length > 0 || groupedWeaknesses[lvl].tinggal.length > 0) {
+                    let cardHTML = `<div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
+                        <div class="bg-slate-100 border-b border-slate-200 px-4 py-2.5 flex justify-between items-center">
+                            <span class="font-black text-slate-700 text-xs tracking-wider">${sesiLabel} <span class="mx-1 text-slate-400 font-normal">|</span> ${topTitle}</span>
+                            <span class="font-bold text-[10px] text-slate-500">${topDate}</span>
+                        </div>
+                        <div class="p-4 sm:p-5 flex flex-col gap-3">`;
+
+                    if (groupedWeaknesses[lvl].sangkut.length > 0) {
+                        cardHTML += `
+                            <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
+                                <span class="uppercase tracking-wider font-extrabold text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 shrink-0">TAHAP ${lvl}</span>
+                                <span class="leading-relaxed">${levelMessages[lvl].orenMsg}</span>
                             </div>
-                            <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-start gap-2.5">
-                                <div class="flex-grow">
-                                    <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
-                                    <p class="text-slate-700 text-[11px] sm:text-xs font-semibold text-justify leading-relaxed">${levelMessages[lvl].orenFokus}</p>
-                                </div>
+                            <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
+                                ${groupedWeaknesses[lvl].sangkut.join('')}
                             </div>
-                        </div>`;
-                }
-                if (groupedWeaknesses[lvl].tinggal.length > 0) {
-                    weaknessHTML += `
-                        <div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
-                            <div class="p-4 sm:p-5 flex flex-col gap-3">
-                                <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
-                                    <span class="uppercase tracking-wider font-extrabold text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded border border-rose-200 shrink-0">TAHAP ${lvl}</span>
-                                    <span class="leading-relaxed">${levelMessages[lvl].merahMsg}</span>
-                                </div>
-                                <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
-                                    ${groupedWeaknesses[lvl].tinggal.join('')}
-                                </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mt-1 mb-2">
+                                <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
+                                <p class="text-slate-700 text-[11px] font-semibold text-justify leading-relaxed">${levelMessages[lvl].orenFokus}</p>
                             </div>
-                            <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-start gap-2.5">
-                                <div class="flex-grow">
-                                    <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
-                                    <p class="text-slate-700 text-[11px] sm:text-xs font-semibold text-justify leading-relaxed">${levelMessages[lvl].merahFokus}</p>
-                                </div>
+                        `;
+                    }
+                    if (groupedWeaknesses[lvl].tinggal.length > 0) {
+                        cardHTML += `
+                            <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
+                                <span class="uppercase tracking-wider font-extrabold text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded border border-rose-200 shrink-0">TAHAP ${lvl}</span>
+                                <span class="leading-relaxed">${levelMessages[lvl].merahMsg}</span>
                             </div>
-                        </div>`;
+                            <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
+                                ${groupedWeaknesses[lvl].tinggal.join('')}
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mt-1 mb-2">
+                                <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
+                                <p class="text-slate-700 text-[11px] font-semibold text-justify leading-relaxed">${levelMessages[lvl].merahFokus}</p>
+                            </div>
+                        `;
+                    }
+                    cardHTML += `</div></div>`;
+                    weaknessHTML += cardHTML;
                 }
             });
 
             if (added === 0) {
                 weaknessHTML = `
-                    <div class="bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-2 rounded-xl w-full flex items-center mb-2">
-                        <i class="fa-solid fa-circle-check shrink-0 mr-2"></i>
-                        <span>Tiada kelemahan ketara dikesan. Sebutan sangat mantap!</span>
+                    <div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
+                        <div class="bg-emerald-50 border-b border-emerald-100 px-4 py-2.5 flex justify-between items-center">
+                            <span class="font-black text-emerald-800 text-xs tracking-wider">${sesiLabel} <span class="mx-1 text-emerald-600/50 font-normal">|</span> ${topTitle}</span>
+                            <span class="font-bold text-[10px] text-emerald-600">${topDate}</span>
+                        </div>
+                        <div class="p-4 flex items-center gap-2 text-emerald-700 text-[11px] sm:text-xs font-bold">
+                             <i class="fa-solid fa-circle-check text-emerald-500 text-base"></i> Tiada kelemahan ketara dikesan. Sebutan sangat mantap!
+                        </div>
                     </div>`;
             }
             weaknessContainer.innerHTML = weaknessHTML;
 
             const returnFunc = prefix === 'smrc' ? 'renderPersonalStudentReport()' : 'refreshCurrentStudentReport()';
             
-            // Padamkan blok "Cadangan Fokus Anda:" lama dan ubah tajuk "Kamus Kelemahan Peribadi"
+            // TUKAR NAMA TAJUK KEPADA NAMA LALAI SUPAYA SENTIASA SERAGAM
             const titleEl = weaknessContainer.parentElement.querySelector('span.text-slate-500.block');
-            if (titleEl) titleEl.innerText = "Analisis Kelemahan & Cadangan Fokus (Rekod Semasa)";
+            if (titleEl) titleEl.innerText = "Analisis Kelemahan & Cadangan Fokus";
 
             if(focusText) {
                 // Sembunyikan label lama
                 const labelElement = focusText.parentElement.querySelector('span.uppercase');
                 if (labelElement) labelElement.style.display = 'none';
                 
-                // Formatkan tarikh supaya kemas dan tidak meleret panjang di skrin
-                let cleanDate = log.date ? String(log.date).replace(/^'/, '') : "";
-                if (cleanDate && cleanDate.includes('GMT')) {
-                    const d = new Date(cleanDate);
-                    if (!isNaN(d.getTime())) {
-                        cleanDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
-                    }
-                } else if (cleanDate && cleanDate.includes('-')) {
-                    const parts = cleanDate.split('-');
-                    if (parts.length === 3) cleanDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                }
-                
-                focusText.innerHTML = `<div class="text-[10px] text-slate-500 bg-slate-100 p-2 rounded-lg border border-slate-200 text-center mt-2">Menunjukkan kesalahan khusus bagi sesi <b>${cleanDate}</b> sahaja. <button onclick="${returnFunc}" class="text-emerald-600 underline font-bold cursor-pointer hover:text-emerald-800 ml-1">Tunjukkan Keseluruhan</button></div>`;
+                focusText.innerHTML = `<div class="text-[10px] text-slate-500 bg-slate-100 p-2 rounded-lg border border-slate-200 text-center mt-2">Anda sedang melihat analisis bagi satu rekod. <button onclick="${returnFunc}" class="text-emerald-600 underline font-bold cursor-pointer hover:text-emerald-800 ml-1">Tunjukkan Keseluruhan</button></div>`;
             }
 
 
@@ -4098,7 +4181,7 @@ function displayActiveLatihan() {
         }
 
 
-          function renderPersonalStudentReport() {
+function renderPersonalStudentReport(customLogIds = null) {
             const student = currentActiveUser;
             if (!student) return;
             
@@ -4123,7 +4206,14 @@ function displayActiveLatihan() {
                 });
             }
 
-            let reviewedLogs = filteredLogs.filter(l => l.isReviewed);
+            // KIRA NOMBOR SESI SECARA KRONOLOGI PADA SEMUA REKOD (LAMA -> BARU)
+            let allLogsAsc = [...filteredLogs].sort((a, b) => (parseInt(String(a.id).replace(/\D/g, '')) || 0) - (parseInt(String(b.id).replace(/\D/g, '')) || 0));
+            allLogsAsc.forEach((l, index) => {
+                l.sessionNumber = index + 1;
+            });
+            
+            // HANYA ISYTIHAR SEKALI SAHAJA DI SINI (Membaiki ralat SyntaxError)
+            let reviewedLogs = allLogsAsc.filter(l => l.isReviewed);
 
             let avgScore = 0;
             let avgJeda = 0;
@@ -4141,16 +4231,22 @@ function displayActiveLatihan() {
             document.getElementById('smrc-average-score').innerText = reviewedLogs.length > 0 ? `${avgScore}%` : "N/A";
             document.getElementById('smrc-trend-indicator').innerHTML = calculateTrend(personalLogs, selectedMonth);
 
-          // KEMAS KINI MUTLAK: Susunan Kalis Ralat String "LOG_"
-            let latestLogsDesc = [...reviewedLogs].sort((a, b) => (parseInt(String(b.id).replace(/\D/g, '')) || 0) - (parseInt(String(a.id).replace(/\D/g, '')) || 0));
+            // SENARAI TERKINI -> LAMA UNTUK PAPARAN SEJARAH & KOTAK ANALISIS
+            let latestLogsDesc = [...reviewedLogs].reverse();
             
-            // KEMAS KINI BAHARU: Ambil 3 rekod teratas secara mutlak tanpa diskriminasi topik
-            let uniqueTopicsLogs = latestLogsDesc.slice(0, 3);
+            let uniqueTopicsLogs = [];
+            if (customLogIds && customLogIds.length > 0) {
+                uniqueTopicsLogs = latestLogsDesc.filter(l => customLogIds.includes(String(l.id)));
+                showToast("Graf & Analisis dikemaskini mengikut sesi pilihan anda.", "success");
+            } else {
+                uniqueTopicsLogs = latestLogsDesc; 
+            }
 
             let starHTML = "Belum Dinilai";
-            if (uniqueTopicsLogs.length > 0) {
-                let sumScore = uniqueTopicsLogs.reduce((acc, l) => acc + (l.manualScore !== null ? l.manualScore : l.score), 0);
-                let uniqueAvg = Math.round(sumScore / uniqueTopicsLogs.length);
+            let top3Logs = latestLogsDesc.slice(0, 3);
+            if (top3Logs.length > 0) {
+                let sumScore = top3Logs.reduce((acc, l) => acc + (l.manualScore !== null ? l.manualScore : l.score), 0);
+                let uniqueAvg = Math.round(sumScore / top3Logs.length);
                 if (uniqueAvg >= 80) starHTML = "⭐⭐⭐⭐⭐";
                 else if (uniqueAvg >= 50) starHTML = "⭐⭐⭐";
                 else starHTML = "⭐⭐";
@@ -4172,41 +4268,9 @@ function displayActiveLatihan() {
 
             const weaknessContainer = document.getElementById('smrc-weakness-tags');
             weaknessContainer.innerHTML = "";
+            let weaknessHTML = "";
             let added = 0;
-            let focusSet = new Set();
             
-            let groupedWeaknesses = {
-                1: { sangkut: [], tinggal: [] },
-                2: { sangkut: [], tinggal: [] },
-                3: { sangkut: [], tinggal: [] },
-                4: { sangkut: [], tinggal: [] },
-                5: { sangkut: [], tinggal: [] },
-                6: { sangkut: [], tinggal: [] }
-            };
-
-            uniqueTopicsLogs.forEach(l => {
-                const t = topics.find(tp => String(tp.id) === String(l.topicId));
-                const level = t ? (parseInt(t.difficulty) || 3) : 3;
-
-                if (l.weaknessTags) {
-                    l.weaknessTags.forEach(tag => {
-                        let isSangkut = tag.includes('[Sangkut]');
-                        let cleanWord = tag.replace('[Sangkut] ', '').replace('[Salah/Tinggal] ', '').trim();
-                        
-                        // PERUBAHAN UI IDEA 3: Teks biasa ditukar menjadi Lencana Tag (Pill Badges)
-                        if (isSangkut) {
-                            let wordSpan = `<span class="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm font-bold shadow-sm">${cleanWord}</span>`;
-                            groupedWeaknesses[level].sangkut.push(wordSpan);
-                        } else {
-                            let wordSpan = `<span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-sm font-bold shadow-sm">${cleanWord}</span>`;
-                            groupedWeaknesses[level].tinggal.push(wordSpan);
-                        }
-                        added++;
-                    });
-                }
-            });
-
-             let weaknessHTML = "";
             const levelMessages = {
                 1: { orenMsg: "Kurang memuaskan dalam sebutan huruf dan bunyi (Alphabets & Phonics):", orenFokus: "Fokus meningkatkan kelancaran sebutan huruf dan bunyi (Alphabets & Phonics).", merahMsg: "Masih Belum Menguasai Sebutan Huruf Dan Bunyi (Alphabets & Phonics):", merahFokus: "Ulang latihan sebutan huruf dan bunyi (Alphabets & Phonics) sehingga sebutan menjadi tepat." },
                 2: { orenMsg: "Kurang memuaskan dalam sebutan perkataan asas (Sight Words / CVC Words):", orenFokus: "Fokus meningkatkan kelancaran sebutan perkataan asas (Sight Words / CVC Words) Bahasa Inggeris.", merahMsg: "Masih belum menguasai sebutan perkataan asas (Sight Words / CVC Words):", merahFokus: "Ulang latihan sebutan perkataan asas (Sight Words / CVC Words) yang belum dikuasai sehingga sebutan menjadi tepat." },
@@ -4215,93 +4279,122 @@ function displayActiveLatihan() {
                 5: { orenMsg: "Kurang memuaskan dalam sebutan perkataan dalam petikan pendek (Short Passages):", orenFokus: "Fokus meningkatkan kelancaran membaca petikan pendek (Short Passages) serta ketepatan sebutan setiap perkataan.", merahMsg: "Masih belum menguasai sebutan perkataan dalam petikan pendek (Short Passages):", merahFokus: "Ulang latihan membaca petikan pendek (Short Passages) dengan memberi perhatian kepada sebutan setiap perkataan yang belum dikuasai." },
                 6: { orenMsg: "Kurang memuaskan dalam sebutan perkataan dalam karangan (Compositions):", orenFokus: "Fokus meningkatkan kelancaran membaca karangan (Compositions) serta ketepatan sebutan setiap perkataan.", merahMsg: "Masih belum menguasai sebutan perkataan dalam karangan (Compositions):", merahFokus: "Ulang latihan membaca karangan (Compositions) dengan memberi perhatian kepada sebutan setiap perkataan yang belum dikuasai." }
             };
-            
-              [1, 2, 3, 4, 5, 6].forEach(lvl => {
-                if (groupedWeaknesses[lvl].sangkut.length > 0) {
-                    weaknessHTML += `
-                        <div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
-                            <div class="p-4 sm:p-5 flex flex-col gap-3">
-                                <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
-                                    <span class="uppercase tracking-wider font-extrabold text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 shrink-0">TAHAP ${lvl}</span>
-                                    <span class="leading-relaxed">${levelMessages[lvl].orenMsg}</span>
-                                </div>
-                                <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
-                                    ${groupedWeaknesses[lvl].sangkut.join('')}
-                                </div>
-                            </div>
-                            <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-start gap-2.5">
-                                <div class="flex-grow">
-                                    <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
-                                    <p class="text-slate-700 text-[11px] sm:text-xs font-semibold text-justify leading-relaxed">${levelMessages[lvl].orenFokus}</p>
-                                </div>
-                            </div>
-                        </div>`;
+
+            uniqueTopicsLogs.forEach((log) => {
+                const t = topics.find(tp => String(tp.id) === String(log.topicId));
+                const level = t ? (parseInt(t.difficulty) || 3) : 3;
+                const sesiLabel = `SESI ${log.sessionNumber}`;
+                
+                let shortDate = log.date ? String(log.date).replace(/^'/, '') : "";
+                if (shortDate && shortDate.includes('GMT')) {
+                    const d = new Date(shortDate);
+                    if (!isNaN(d.getTime())) {
+                        shortDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                    }
+                } else if (shortDate && shortDate.includes('-')) {
+                    const parts = shortDate.split('-');
+                    if (parts.length === 3) shortDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 }
-                if (groupedWeaknesses[lvl].tinggal.length > 0) {
-                    weaknessHTML += `
-                        <div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
-                            <div class="p-4 sm:p-5 flex flex-col gap-3">
-                                <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
-                                    <span class="uppercase tracking-wider font-extrabold text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded border border-rose-200 shrink-0">TAHAP ${lvl}</span>
-                                    <span class="leading-relaxed">${levelMessages[lvl].merahMsg}</span>
-                                </div>
-                                <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
-                                    ${groupedWeaknesses[lvl].tinggal.join('')}
-                                </div>
+                
+                let logSangkut = [];
+                let logTinggal = [];
+
+                if (log.weaknessTags) {
+                    log.weaknessTags.forEach(tag => {
+                        let isSangkut = tag.includes('[Sangkut]');
+                        let cleanWord = tag.replace('[Sangkut] ', '').replace('[Salah/Tinggal] ', '').trim();
+                        
+                        if (isSangkut) {
+                            logSangkut.push(`<span class="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm font-bold shadow-sm">${cleanWord}</span>`);
+                        } else {
+                            logTinggal.push(`<span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-sm font-bold shadow-sm">${cleanWord}</span>`);
+                        }
+                    });
+                }
+
+                if (logSangkut.length > 0 || logTinggal.length > 0) {
+                    added++;
+                    let cardHTML = `<div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
+                        <div class="bg-slate-100 border-b border-slate-200 px-4 py-2.5 flex justify-between items-center">
+                            <span class="font-black text-slate-700 text-xs tracking-wider">${sesiLabel} <span class="mx-1 text-slate-400 font-normal">|</span> ${t ? t.title : "Topik"}</span>
+                            <span class="font-bold text-[10px] text-slate-500">${shortDate}</span>
+                        </div>
+                        <div class="p-4 sm:p-5 flex flex-col gap-3">`;
+
+                    if (logSangkut.length > 0) {
+                        cardHTML += `
+                            <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
+                                <span class="uppercase tracking-wider font-extrabold text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 shrink-0">TAHAP ${level}</span>
+                                <span class="leading-relaxed">${levelMessages[level].orenMsg}</span>
                             </div>
-                            <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-start gap-2.5">
-                                <div class="flex-grow">
-                                    <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
-                                    <p class="text-slate-700 text-[11px] sm:text-xs font-semibold text-justify leading-relaxed">${levelMessages[lvl].merahFokus}</p>
-                                </div>
+                            <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
+                                ${logSangkut.join('')}
                             </div>
-                        </div>`;
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mt-1 mb-2">
+                                <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
+                                <p class="text-slate-700 text-[11px] font-semibold text-justify leading-relaxed">${levelMessages[level].orenFokus}</p>
+                            </div>
+                        `;
+                    }
+                    if (logTinggal.length > 0) {
+                        cardHTML += `
+                            <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
+                                <span class="uppercase tracking-wider font-extrabold text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded border border-rose-200 shrink-0">TAHAP ${level}</span>
+                                <span class="leading-relaxed">${levelMessages[level].merahMsg}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
+                                ${logTinggal.join('')}
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mt-1 mb-2">
+                                <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
+                                <p class="text-slate-700 text-[11px] font-semibold text-justify leading-relaxed">${levelMessages[level].merahFokus}</p>
+                            </div>
+                        `;
+                    }
+                    cardHTML += `</div></div>`;
+                    weaknessHTML += cardHTML;
+                } else {
+                    weaknessHTML += `<div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
+                        <div class="bg-emerald-50 border-b border-emerald-100 px-4 py-2.5 flex justify-between items-center">
+                            <span class="font-black text-emerald-800 text-xs tracking-wider">${sesiLabel} <span class="mx-1 text-emerald-600/50 font-normal">|</span> ${t ? t.title : "Topik"}</span>
+                            <span class="font-bold text-[10px] text-emerald-600">${shortDate}</span>
+                        </div>
+                        <div class="p-4 flex items-center gap-2 text-emerald-700 text-[11px] sm:text-xs font-bold">
+                             <i class="fa-solid fa-circle-check text-emerald-500 text-base"></i> Tiada kesalahan dikesan. Sebutan sangat mantap!
+                        </div>
+                    </div>`;
+                    added++;
                 }
             });
 
-            if (added === 0) {
+            if (added === 0 && uniqueTopicsLogs.length === 0) {
                 weaknessHTML = `
                     <div class="bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-2 rounded-xl w-full flex items-center mb-2">
                         <i class="fa-solid fa-circle-check shrink-0 mr-2"></i>
-                        <span>Tiada kelemahan ketara dikesan. Sebutan sangat mantap!</span>
+                        <span>Sila rekodkan latihan untuk memaparkan analisis kelemahan.</span>
                     </div>`;
             }
             weaknessContainer.innerHTML = weaknessHTML;
 
-            // Ubah tajuk & sembunyikan kotak Cadangan Fokus bawah
-            const titleEl = weaknessContainer.parentElement.querySelector('span.text-slate-500.block');
-            if (titleEl) titleEl.innerText = "Analisis Kelemahan & Cadangan Fokus (Keseluruhan)";
-
+            // Sembunyikan Cadangan Fokus statik bawah
             let cadanganFokusEl = document.getElementById('smrc-cadangan-fokus');
             if (cadanganFokusEl) {
                 const parentDiv = cadanganFokusEl.parentElement;
                 if (parentDiv) parentDiv.style.display = 'none';
             }
 
+            // --- AUDIO RECORDINGS LIST ---
             const audioContainer = document.getElementById('smrc-audio-recordings-list');
             audioContainer.innerHTML = "";
             
-            // KEMAS KINI MUTLAK: Susunan Kalis Ralat String "LOG_"
-            let sortedFilteredLogs = [...filteredLogs].sort((a, b) => (parseInt(String(b.id).replace(/\D/g, '')) || 0) - (parseInt(String(a.id).replace(/\D/g, '')) || 0));
-            
-           if (sortedFilteredLogs.length > 0) {
-                sortedFilteredLogs.forEach((l, idx) => {
+            if (latestLogsDesc.length > 0) {
+                latestLogsDesc.forEach((l, idx) => {
                     const activeScore = l.manualScore !== null ? l.manualScore : l.score;
-                    
-                    const latestBadge = (idx === 0) ? 
-                        `<span class="ml-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-amber-900 text-[9px] px-2 py-0.5 rounded-full font-black shadow-sm border border-amber-300"><i class="fa-solid fa-sparkles mr-1"></i>TERKINI</span>` : '';
-
-                    const reviewBadge = l.isReviewed ? 
-                        `<span class="ml-1.5 bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-circle-check"></i> Disemak</span>` : 
-                        `<span class="ml-1.5 bg-amber-50 text-amber-700 text-[9px] px-1.5 py-0.5 rounded font-bold border border-amber-200"><i class="fa-solid fa-clock"></i> Belum Disemak</span>`;
-
+                    const latestBadge = (idx === 0) ? `<span class="ml-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-amber-900 text-[9px] px-2 py-0.5 rounded-full font-black shadow-sm border border-amber-300"><i class="fa-solid fa-sparkles mr-1"></i>TERKINI</span>` : '';
+                    const reviewBadge = l.isReviewed ? `<span class="ml-1.5 bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-circle-check"></i> Disemak</span>` : `<span class="ml-1.5 bg-amber-50 text-amber-700 text-[9px] px-1.5 py-0.5 rounded font-bold border border-amber-200"><i class="fa-solid fa-clock"></i> Belum Disemak</span>`;
                     const displayScore = l.isReviewed ? `${activeScore}%` : 'N/A';
+                    const audioPlayerHTML = l.audioUrl ? `<audio src="${l.audioUrl}" controls class="h-6 w-32 rounded-lg bg-slate-100 shadow-sm"></audio>` : `<span class="text-[10px] text-slate-400 italic">Tiada audio</span>`;
 
-                    const audioPlayerHTML = l.audioUrl 
-                        ? `<audio src="${l.audioUrl}" controls class="h-6 w-32 rounded-lg bg-slate-100 shadow-sm"></audio>` 
-                        : `<span class="text-[10px] text-slate-400 italic">Tiada audio</span>`;
-
-                    // PENYELESAIAN KEMAS: Tapis Tarikh Singapore (GMT) kepada format DD/MM/YYYY
                     let cleanDate = l.date ? String(l.date).replace(/^'/, '') : "";
                     if (cleanDate && cleanDate.includes('GMT')) {
                         const d = new Date(cleanDate);
@@ -4313,10 +4406,18 @@ function displayActiveLatihan() {
                         if (parts.length === 3) cleanDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
                     }
 
-                    audioContainer.innerHTML += `
-                        <div onclick="renderSpecificWeakness('${l.id}', 'smrc')" class="py-2.5 flex justify-between items-center text-xs border-b last:border-0 border-slate-100 transition-colors hover:bg-slate-50 rounded-lg px-2 cursor-pointer group">
-                            <div class="min-w-0 flex-1 flex items-center flex-wrap gap-y-1">
-                                <span class="font-bold text-slate-700 group-hover:text-emerald-600 transition-all">${l.topicTitle} (${cleanDate})</span>
+                    // Tentukan sama ada ia di-check secara default
+                    let isChecked = customLogIds && customLogIds.includes(String(l.id)) ? 'checked' : '';
+
+                     audioContainer.innerHTML += `
+                        <div id="log-row-smrc-${l.id}" class="py-2.5 flex justify-between items-center text-xs border-b last:border-0 border-slate-100 transition-all hover:bg-slate-50 rounded-lg px-2 cursor-pointer group">
+                            <div class="flex items-center mr-3 shrink-0" onclick="event.stopPropagation()">
+                                <input type="checkbox" class="log-checkbox w-4 h-4 cursor-pointer text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" value="${l.id}" onchange="updateSelectedLogsCheckbox('smrc')" ${isChecked}>
+                            </div>
+                            
+                            <div class="min-w-0 flex-1 flex items-center flex-wrap gap-y-1" onclick="renderSpecificWeakness('${l.id}', 'smrc', ${l.sessionNumber}, '${cleanDate}')">
+
+                                <span class="font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">Sesi ${l.sessionNumber} - ${l.topicTitle} (${cleanDate})</span>
                                 ${latestBadge}
                                 ${reviewBadge}
                             </div>
@@ -4331,64 +4432,19 @@ function displayActiveLatihan() {
                 audioContainer.innerHTML = `<p class="text-xs text-slate-400">Tiada rekod latihan.</p>`;
             }
 
-            if (studentChartInstance) {
-                studentChartInstance.destroy();
+           // GRAF DINAMIK: Gunakan log yang ditanda, atau jika kosong, papar semua sejarah
+            let chartLogs = [];
+            if (customLogIds && customLogIds.length > 0) {
+                chartLogs = uniqueTopicsLogs; // graphLogs sudah ditapis dengan customLogIds
+            } else {
+                chartLogs = [...latestLogsDesc]; // Buang had .slice(0,5), papar semua sesi
             }
-            const ctx = document.getElementById('smrc-progress-chart').getContext('2d');
-            const sessions = [...uniqueTopicsLogs].reverse(); 
-            const labels = sessions.map((s, idx) => `Sesi ${idx + 1}`);
-            const dataPoints = sessions.map(s => s.manualScore !== null ? s.manualScore : s.score);
-            const logIds = sessions.map(s => String(s.id));
+            
+            // Reverse supaya urutan graf dari lama ke baru (Kiri ke Kanan)
+            chartLogs.reverse();
 
-            studentChartInstance = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: labels.length > 0 ? labels : ["Tiada Data"],
-                    customIds: logIds,
-                    datasets: [{
-                        label: 'Skor Sebutan (%)', data: dataPoints.length > 0 ? dataPoints : [0],
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                        borderRadius: 6,
-                        maxBarThickness: 50
-                    }]
-                },
-                options: {
-                    layout: { padding: { top: 20 } },
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { min: 0, max: 100 } },
-                    animation: {
-                        onComplete: function(animation) {
-                            const chartInstance = animation.chart;
-                            const ctx = chartInstance.ctx;
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'bottom';
-                            ctx.fillStyle = '#1e293b';
-                            ctx.font = 'bold 13px Inter';
-                            chartInstance.data.datasets.forEach(function(dataset, i) {
-                                const meta = chartInstance.getDatasetMeta(i);
-                                meta.data.forEach(function(bar, index) {
-                                    const data = dataset.data[index] + '%';
-                                    ctx.fillText(data, bar.x, bar.y - 5);
-                                });
-                            });
-                        }
-                    }
-                }
-            });
+            buildProgressChart('smrc-progress-chart', chartLogs);
         }
-
-        /* ==========================================================================
-           12. SPEECH SYNTHESIS & TTS VOICE CONTROLLER
-           ========================================================================== */
-        let availableVoices = [];
-        function loadSystemVoices() {
-            availableVoices = window.speechSynthesis.getVoices();
-        }
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {
-            window.speechSynthesis.onvoiceschanged = loadSystemVoices;
-        }
-        loadSystemVoices();
 
         function getBestMalayVoice() {
             if (availableVoices.length === 0) availableVoices = window.speechSynthesis.getVoices();
@@ -5212,7 +5268,7 @@ function renderOverallAnalysis() {
             }
         }
 
-    function selectStudentForReportCard(ic) {
+     function selectStudentForReportCard(ic, customLogIds = null) {
             let keeper = document.getElementById('current-viewing-student-ic');
             if (!keeper) {
                 keeper = document.createElement('input');
@@ -5255,7 +5311,14 @@ function renderOverallAnalysis() {
                 });
             }
 
-            let reviewedLogs = filteredLogs.filter(l => l.isReviewed);
+            // KIRA NOMBOR SESI SECARA KRONOLOGI PADA SEMUA REKOD (LAMA -> BARU)
+            let allLogsAsc = [...filteredLogs].sort((a, b) => (parseInt(String(a.id).replace(/\D/g, '')) || 0) - (parseInt(String(b.id).replace(/\D/g, '')) || 0));
+            allLogsAsc.forEach((l, index) => {
+                l.sessionNumber = index + 1;
+            });
+            
+            // HANYA ISYTIHAR SEKALI SAHAJA DI SINI
+            let reviewedLogs = allLogsAsc.filter(l => l.isReviewed);
 
             let avgScore = 0;
             let avgJeda = 0;
@@ -5275,16 +5338,22 @@ function renderOverallAnalysis() {
 
             document.getElementById('rc-trend-indicator').innerHTML = calculateTrend(personalLogs, selectedMonth);
 
-            // KEMAS KINI MUTLAK: Susunan Kalis Ralat String "LOG_"
-            let latestLogsDesc = [...reviewedLogs].sort((a, b) => (parseInt(String(b.id).replace(/\D/g, '')) || 0) - (parseInt(String(a.id).replace(/\D/g, '')) || 0));
+            // SENARAI TERKINI -> LAMA UNTUK PAPARAN SEJARAH & KOTAK ANALISIS
+            let latestLogsDesc = [...reviewedLogs].reverse();
             
-            // KEMAS KINI BAHARU: Ambil 3 rekod teratas secara mutlak tanpa diskriminasi topik
-            let uniqueTopicsLogs = latestLogsDesc.slice(0, 3);
+            let uniqueTopicsLogs = [];
+            if (customLogIds && customLogIds.length > 0) {
+                uniqueTopicsLogs = latestLogsDesc.filter(l => customLogIds.includes(String(l.id)));
+                showToast("Graf & Analisis dikemaskini mengikut sesi pilihan anda.", "success");
+            } else {
+                uniqueTopicsLogs = latestLogsDesc; 
+            }
 
             let starHTML = "Belum Dinilai";
-            if (uniqueTopicsLogs.length > 0) {
-                let sumScore = uniqueTopicsLogs.reduce((acc, l) => acc + (l.manualScore !== null ? l.manualScore : l.score), 0);
-                let uniqueAvg = Math.round(sumScore / uniqueTopicsLogs.length);
+            let top3Logs = latestLogsDesc.slice(0, 3);
+            if (top3Logs.length > 0) {
+                let sumScore = top3Logs.reduce((acc, l) => acc + (l.manualScore !== null ? l.manualScore : l.score), 0);
+                let uniqueAvg = Math.round(sumScore / top3Logs.length);
                 if (uniqueAvg >= 80) starHTML = "⭐⭐⭐⭐⭐";
                 else if (uniqueAvg >= 50) starHTML = "⭐⭐⭐";
                 else starHTML = "⭐⭐";
@@ -5297,7 +5366,7 @@ function renderOverallAnalysis() {
 
             const activeTopics = JSON.parse(AppStorage.getItem('e_smart_eng_topics')) || [];
             const allTopicsCompleted = activeTopics.length > 0 && activeTopics.every(t => personalLogs.some(l => String(l.topicId) === String(t.id) && l.isReviewed));
-            const badge = document.getElementById('rc-badge-holder');;
+            const badge = document.getElementById('rc-badge-holder');
             if (avgScore >= 85 && allTopicsCompleted && reviewedLogs.length > 0) {
                 badge.classList.remove('hidden');
             } else {
@@ -5306,41 +5375,9 @@ function renderOverallAnalysis() {
 
             const weaknessContainer = document.getElementById('rc-weakness-tags');
             weaknessContainer.innerHTML = "";
+            let weaknessHTML = "";
             let added = 0;
-            let focusSet = new Set();
             
-             let groupedWeaknesses = {
-                1: { sangkut: [], tinggal: [] },
-                2: { sangkut: [], tinggal: [] },
-                3: { sangkut: [], tinggal: [] },
-                4: { sangkut: [], tinggal: [] },
-                5: { sangkut: [], tinggal: [] },
-                6: { sangkut: [], tinggal: [] }
-            };
-
-            uniqueTopicsLogs.forEach(l => {
-                const t = topics.find(tp => String(tp.id) === String(l.topicId));
-                const level = t ? (parseInt(t.difficulty) || 3) : 3;
-
-                if (l.weaknessTags) {
-                    l.weaknessTags.forEach(tag => {
-                        let isSangkut = tag.includes('[Sangkut]');
-                        let cleanWord = tag.replace('[Sangkut] ', '').replace('[Salah/Tinggal] ', '').trim();
-                        
-                        // PERUBAHAN UI IDEA 3: Teks biasa ditukar menjadi Lencana Tag (Pill Badges)
-                        if (isSangkut) {
-                            let wordSpan = `<span class="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm font-bold shadow-sm">${cleanWord}</span>`;
-                            groupedWeaknesses[level].sangkut.push(wordSpan);
-                        } else {
-                            let wordSpan = `<span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-sm font-bold shadow-sm">${cleanWord}</span>`;
-                            groupedWeaknesses[level].tinggal.push(wordSpan);
-                        }
-                        added++;
-                    });
-                }
-            });
-
-             let weaknessHTML = "";
             const levelMessages = {
                 1: { orenMsg: "Kurang memuaskan dalam sebutan huruf dan bunyi (Alphabets & Phonics):", orenFokus: "Fokus meningkatkan kelancaran sebutan huruf dan bunyi (Alphabets & Phonics).", merahMsg: "Masih Belum Menguasai Sebutan Huruf Dan Bunyi (Alphabets & Phonics):", merahFokus: "Ulang latihan sebutan huruf dan bunyi (Alphabets & Phonics) sehingga sebutan menjadi tepat." },
                 2: { orenMsg: "Kurang memuaskan dalam sebutan perkataan asas (Sight Words / CVC Words):", orenFokus: "Fokus meningkatkan kelancaran sebutan perkataan asas (Sight Words / CVC Words) Bahasa Inggeris.", merahMsg: "Masih belum menguasai sebutan perkataan asas (Sight Words / CVC Words):", merahFokus: "Ulang latihan sebutan perkataan asas (Sight Words / CVC Words) yang belum dikuasai sehingga sebutan menjadi tepat." },
@@ -5349,62 +5386,103 @@ function renderOverallAnalysis() {
                 5: { orenMsg: "Kurang memuaskan dalam sebutan perkataan dalam petikan pendek (Short Passages):", orenFokus: "Fokus meningkatkan kelancaran membaca petikan pendek (Short Passages) serta ketepatan sebutan setiap perkataan.", merahMsg: "Masih belum menguasai sebutan perkataan dalam petikan pendek (Short Passages):", merahFokus: "Ulang latihan membaca petikan pendek (Short Passages) dengan memberi perhatian kepada sebutan setiap perkataan yang belum dikuasai." },
                 6: { orenMsg: "Kurang memuaskan dalam sebutan perkataan dalam karangan (Compositions):", orenFokus: "Fokus meningkatkan kelancaran membaca karangan (Compositions) serta ketepatan sebutan setiap perkataan.", merahMsg: "Masih belum menguasai sebutan perkataan dalam karangan (Compositions):", merahFokus: "Ulang latihan membaca karangan (Compositions) dengan memberi perhatian kepada sebutan setiap perkataan yang belum dikuasai." }
             };
-            
-              [1, 2, 3, 4, 5, 6].forEach(lvl => {
-                if (groupedWeaknesses[lvl].sangkut.length > 0) {
-                    weaknessHTML += `
-                        <div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
-                            <div class="p-4 sm:p-5 flex flex-col gap-3">
-                                <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
-                                    <span class="uppercase tracking-wider font-extrabold text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 shrink-0">TAHAP ${lvl}</span>
-                                    <span class="leading-relaxed">${levelMessages[lvl].orenMsg}</span>
-                                </div>
-                                <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
-                                    ${groupedWeaknesses[lvl].sangkut.join('')}
-                                </div>
-                            </div>
-                            <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-start gap-2.5">
-                                <div class="flex-grow">
-                                    <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
-                                    <p class="text-slate-700 text-[11px] sm:text-xs font-semibold text-justify leading-relaxed">${levelMessages[lvl].orenFokus}</p>
-                                </div>
-                            </div>
-                        </div>`;
+
+            uniqueTopicsLogs.forEach((log) => {
+                const t = topics.find(tp => String(tp.id) === String(log.topicId));
+                const level = t ? (parseInt(t.difficulty) || 3) : 3;
+                const sesiLabel = `SESI ${log.sessionNumber}`;
+                
+                // Formatkan Tarikh Pendek yang Kemas (Buang GMT)
+                let shortDate = log.date ? String(log.date).replace(/^'/, '') : "";
+                if (shortDate && shortDate.includes('GMT')) {
+                    const d = new Date(shortDate);
+                    if (!isNaN(d.getTime())) {
+                        shortDate = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+                    }
+                } else if (shortDate && shortDate.includes('-')) {
+                    const parts = shortDate.split('-');
+                    if (parts.length === 3) shortDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 }
-                if (groupedWeaknesses[lvl].tinggal.length > 0) {
-                    weaknessHTML += `
-                        <div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
-                            <div class="p-4 sm:p-5 flex flex-col gap-3">
-                                <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
-                                    <span class="uppercase tracking-wider font-extrabold text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded border border-rose-200 shrink-0">TAHAP ${lvl}</span>
-                                    <span class="leading-relaxed">${levelMessages[lvl].merahMsg}</span>
-                                </div>
-                                <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
-                                    ${groupedWeaknesses[lvl].tinggal.join('')}
-                                </div>
+                
+                let logSangkut = [];
+                let logTinggal = [];
+
+                if (log.weaknessTags) {
+                    log.weaknessTags.forEach(tag => {
+                        let isSangkut = tag.includes('[Sangkut]');
+                        let cleanWord = tag.replace('[Sangkut] ', '').replace('[Salah/Tinggal] ', '').trim();
+                        
+                        if (isSangkut) {
+                            logSangkut.push(`<span class="px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm font-bold shadow-sm">${cleanWord}</span>`);
+                        } else {
+                            logTinggal.push(`<span class="px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded-lg text-sm font-bold shadow-sm">${cleanWord}</span>`);
+                        }
+                    });
+                }
+
+                if (logSangkut.length > 0 || logTinggal.length > 0) {
+                    added++;
+                    let cardHTML = `<div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
+                        <div class="bg-slate-100 border-b border-slate-200 px-4 py-2.5 flex justify-between items-center">
+                            <span class="font-black text-slate-700 text-xs tracking-wider">${sesiLabel} <span class="mx-1 text-slate-400 font-normal">|</span> ${t ? t.title : "Topik"}</span>
+                            <span class="font-bold text-[10px] text-slate-500">${shortDate}</span>
+                        </div>
+                        <div class="p-4 sm:p-5 flex flex-col gap-3">`;
+
+                    if (logSangkut.length > 0) {
+                        cardHTML += `
+                            <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
+                                <span class="uppercase tracking-wider font-extrabold text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded border border-amber-200 shrink-0">TAHAP ${level}</span>
+                                <span class="leading-relaxed">${levelMessages[level].orenMsg}</span>
                             </div>
-                            <div class="bg-slate-50 p-4 border-t border-slate-100 flex items-start gap-2.5">
-                                <div class="flex-grow">
-                                    <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
-                                    <p class="text-slate-700 text-[11px] sm:text-xs font-semibold text-justify leading-relaxed">${levelMessages[lvl].merahFokus}</p>
-                                </div>
+                            <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
+                                ${logSangkut.join('')}
                             </div>
-                        </div>`;
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mt-1 mb-2">
+                                <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
+                                <p class="text-slate-700 text-[11px] font-semibold text-justify leading-relaxed">${levelMessages[level].orenFokus}</p>
+                            </div>
+                        `;
+                    }
+                    if (logTinggal.length > 0) {
+                        cardHTML += `
+                            <div class="flex items-start gap-2 font-bold text-slate-700 w-full text-justify text-[11px] sm:text-xs">
+                                <span class="uppercase tracking-wider font-extrabold text-[10px] bg-rose-100 text-rose-800 px-2 py-0.5 rounded border border-rose-200 shrink-0">TAHAP ${level}</span>
+                                <span class="leading-relaxed">${levelMessages[level].merahMsg}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1.5 w-full justify-start mt-1">
+                                ${logTinggal.join('')}
+                            </div>
+                            <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 mt-1 mb-2">
+                                <span class="font-bold text-[10px] uppercase tracking-wider text-slate-500 mb-1 block">Cadangan Fokus:</span>
+                                <p class="text-slate-700 text-[11px] font-semibold text-justify leading-relaxed">${levelMessages[level].merahFokus}</p>
+                            </div>
+                        `;
+                    }
+                    cardHTML += `</div></div>`;
+                    weaknessHTML += cardHTML;
+                } else {
+                    weaknessHTML += `<div class="bg-white border border-slate-200 rounded-2xl w-full mb-4 overflow-hidden shadow-sm flex flex-col">
+                        <div class="bg-emerald-50 border-b border-emerald-100 px-4 py-2.5 flex justify-between items-center">
+                            <span class="font-black text-emerald-800 text-xs tracking-wider">${sesiLabel} <span class="mx-1 text-emerald-600/50 font-normal">|</span> ${t ? t.title : "Topik"}</span>
+                            <span class="font-bold text-[10px] text-emerald-600">${shortDate}</span>
+                        </div>
+                        <div class="p-4 flex items-center gap-2 text-emerald-700 text-[11px] sm:text-xs font-bold">
+                             <i class="fa-solid fa-circle-check text-emerald-500 text-base"></i> Tiada kesalahan dikesan. Sebutan sangat mantap!
+                        </div>
+                    </div>`;
+                    added++;
                 }
             });
 
-            if (added === 0) {
+            if (added === 0 && uniqueTopicsLogs.length === 0) {
                 weaknessHTML = `
                     <div class="bg-emerald-50 border border-emerald-100 text-emerald-800 text-xs font-semibold px-3 py-2 rounded-xl w-full flex items-center mb-2">
                         <i class="fa-solid fa-circle-check shrink-0 mr-2"></i>
-                        <span>Tiada kelemahan ketara dikesan. Sebutan sangat mantap!</span>
+                        <span>Sila rekodkan latihan untuk memaparkan analisis kelemahan.</span>
                     </div>`;
             }
             weaknessContainer.innerHTML = weaknessHTML;
-
-            // Ubah tajuk & sembunyikan kotak Cadangan Fokus bawah
-            const titleEl = weaknessContainer.parentElement.querySelector('span.text-slate-500.block');
-            if (titleEl) titleEl.innerText = "Analisis Kelemahan & Cadangan Fokus (Keseluruhan)";
 
             let cadanganFokusEl = document.getElementById('rc-cadangan-fokus');
             if (cadanganFokusEl) {
@@ -5415,32 +5493,14 @@ function renderOverallAnalysis() {
             const audioContainer = document.getElementById('rc-audio-recordings-list');
             audioContainer.innerHTML = "";
             
-            // KEMAS KINI MUTLAK: Susunan Kalis Ralat String "LOG_"
-            let sortedFilteredLogs = [...filteredLogs].sort((a, b) => (parseInt(String(b.id).replace(/\D/g, '')) || 0) - (parseInt(String(a.id).replace(/\D/g, '')) || 0));
-
-            if (sortedFilteredLogs.length > 0) {
-                sortedFilteredLogs.forEach((l, idx) => {
+            if (latestLogsDesc.length > 0) {
+                latestLogsDesc.forEach((l, idx) => {
                     const activeScore = l.manualScore !== null ? l.manualScore : l.score;
-                    
-                    const latestBadge = (idx === 0) ? 
-                        `<span class="ml-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-amber-900 text-[9px] px-2 py-0.5 rounded-full font-black shadow-sm border border-amber-300"><i class="fa-solid fa-sparkles mr-1"></i>TERKINI</span>` : '';
-
-                    const reviewBadge = l.isReviewed ? 
-                        `<span class="ml-1.5 bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-circle-check"></i> Disemak</span>` : 
-                        `<span class="ml-1.5 bg-amber-50 text-amber-700 text-[9px] px-1.5 py-0.5 rounded font-bold border border-amber-200"><i class="fa-solid fa-clock"></i> Belum Disemak</span>`;
-
+                    const latestBadge = (idx === 0) ? `<span class="ml-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-amber-900 text-[9px] px-2 py-0.5 rounded-full font-black shadow-sm border border-amber-300"><i class="fa-solid fa-sparkles mr-1"></i>TERKINI</span>` : '';
+                    const reviewBadge = l.isReviewed ? `<span class="ml-1.5 bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-circle-check"></i> Disemak</span>` : `<span class="ml-1.5 bg-amber-50 text-amber-700 text-[9px] px-1.5 py-0.5 rounded font-bold border border-amber-200"><i class="fa-solid fa-clock"></i> Belum Disemak</span>`;
                     const displayScore = l.isReviewed ? `${activeScore}%` : 'N/A';
+                    const audioPlayerHTML = l.audioUrl ? `<audio src="${l.audioUrl}" controls class="h-6 w-32 rounded-lg bg-slate-100 shadow-sm"></audio>` : `<span class="text-[10px] text-slate-400 italic">Tiada audio</span>`;
 
-                    const audioPlayerHTML = l.audioUrl 
-                        ? `<audio src="${l.audioUrl}" controls class="h-6 w-32 rounded-lg bg-slate-100 shadow-sm"></audio>` 
-                        : `<span class="text-[10px] text-slate-400 italic">Tiada audio</span>`;
-
-                    // PENYELESAIAN LOGIK: Butang Semak hanya wujud jika ada fail audio (Bukan ditanda Live)
-                    const btnSemakHTML = l.audioUrl && l.audioUrl.trim() !== ""
-                        ? `<button onclick="openManualGradeTeacher('${l.id}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white px-2.5 py-1 rounded font-bold transition-all shadow-sm flex items-center gap-1.5" title="Semak Sebutan"><i class="fa-solid fa-user-pen"></i> Semak</button>`
-                        : ``;
-
-                   // PENYELESAIAN KEMAS: Tapis Tarikh Singapore (GMT) kepada format DD/MM/YYYY
                     let cleanDate = l.date ? String(l.date).replace(/^'/, '') : "";
                     if (cleanDate && cleanDate.includes('GMT')) {
                         const d = new Date(cleanDate);
@@ -5452,13 +5512,21 @@ function renderOverallAnalysis() {
                         if (parts.length === 3) cleanDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
                     }
 
-                      audioContainer.innerHTML += `
-                        <div class="py-2.5 flex justify-between items-center text-xs border-b last:border-0 border-slate-100 group transition-colors hover:bg-slate-50 rounded-lg px-2">
-                            <div class="flex items-center mr-3 shrink-0">
-                                <input type="checkbox" class="log-checkbox w-4 h-4 cursor-pointer text-rose-600 rounded border-slate-300 focus:ring-rose-500" value="${l.id}" onchange="updateSelectedLogsCheckbox()">
+                    // Tentukan sama ada ia di-check secara default
+                    let isChecked = customLogIds && customLogIds.includes(String(l.id)) ? 'checked' : '';
+
+                    const btnSemakHTML = l.audioUrl && l.audioUrl.trim() !== ""
+                        ? `<button onclick="openManualGradeTeacher('${l.id}')" class="bg-indigo-100 text-indigo-700 hover:bg-indigo-600 hover:text-white px-2.5 py-1 rounded font-bold transition-all shadow-sm flex items-center gap-1.5" title="Semak Sebutan"><i class="fa-solid fa-user-pen"></i> Semak</button>`
+                        : ``;
+
+                     audioContainer.innerHTML += `
+                        <div id="log-row-rc-${l.id}" class="py-2.5 flex justify-between items-center text-xs border-b last:border-0 border-slate-100 group transition-all hover:bg-slate-50 rounded-lg px-2 cursor-pointer">
+                            <div class="flex items-center mr-3 shrink-0" onclick="event.stopPropagation()">
+                                <input type="checkbox" class="log-checkbox w-4 h-4 cursor-pointer text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" value="${l.id}" onchange="updateSelectedLogsCheckbox('rc')" ${isChecked}>
                             </div>
-                            <div class="min-w-0 flex-1 flex items-center flex-wrap gap-y-1 cursor-pointer" onclick="renderSpecificWeakness('${l.id}', 'rc')">
-                                <span class="font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">${l.topicTitle} (${cleanDate})</span>
+                            <div class="min-w-0 flex-1 flex items-center flex-wrap gap-y-1" onclick="renderSpecificWeakness('${l.id}', 'rc', ${l.sessionNumber}, '${cleanDate}')">
+
+                                <span class="font-bold text-slate-700 group-hover:text-emerald-600 transition-colors">Sesi ${l.sessionNumber} - ${l.topicTitle} (${cleanDate})</span>
                                 ${latestBadge}
                                 ${reviewBadge}
                             </div>
@@ -5469,32 +5537,51 @@ function renderOverallAnalysis() {
                             </div>
                         </div>
                     `;
-
                 });
             } else {
                 audioContainer.innerHTML = `<p class="text-xs text-slate-400">Tiada rakaman audio direkodkan.</p>`;
             }
 
-            buildProgressChart('rc-progress-chart', uniqueTopicsLogs);
+          // GRAF DINAMIK: Gunakan log yang ditanda, atau jika kosong, papar semua sejarah
+            let chartLogs = [];
+            if (customLogIds && customLogIds.length > 0) {
+                chartLogs = uniqueTopicsLogs; // Jika ada pilihan, papar yang dipilih sahaja
+            } else {
+                chartLogs = [...latestLogsDesc]; // Buang had .slice(0,5), papar semua sesi
+            }
+            
+            // Susun graf dari Kiri (Lama) ke Kanan (Baru)
+            chartLogs.reverse();
+
+            buildProgressChart('rc-progress-chart', chartLogs);
         }
 
-        function buildProgressChart(canvasId, reviewedLogs) {
+         function buildProgressChart(canvasId, reviewedLogs) {
             const ctx = document.getElementById(canvasId).getContext('2d');
-            if (chartInstance) chartInstance.destroy();
+            
+            // Urus pemadaman chart dengan betul mengikut Canvas ID
+            if (canvasId === 'smrc-progress-chart' && studentChartInstance) {
+                studentChartInstance.destroy();
+            } else if (canvasId === 'rc-progress-chart' && chartInstance) {
+                chartInstance.destroy();
+            }
 
-            const sessions = [...reviewedLogs].reverse(); 
-            const labels = sessions.map((s, idx) => `Sesi ${idx + 1}`);
+            // Data sudah disusun dari lama ke baru di dalam fungsi sebelum ini
+            const sessions = [...reviewedLogs]; 
+            
+            // LABEL DINAMIK MENGIKUT NOMBOR SESI SEBENAR (Cth: Sesi 4, Sesi 5, Sesi 6)
+            const labels = sessions.map((s) => s.sessionNumber ? `Sesi ${s.sessionNumber}` : `Sesi`);
             const dataPoints = sessions.map(s => s.manualScore !== null ? s.manualScore : s.score);
-            const logIds = sessions.map(s => String(s.id)); // KOD TAMBAHAN: Pengikat ID untuk Graf
+            const logIds = sessions.map(s => String(s.id));
 
-            chartInstance = new Chart(ctx, {
+            const newChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels.length > 0 ? labels : ["Tiada Data"],
-                    customIds: logIds, // KOD TAMBAHAN: Simpan ID ke dalam memori Graf
+                    customIds: logIds, 
                     datasets: [{
                         label: 'Skor Sebutan (%)', data: dataPoints.length > 0 ? dataPoints : [0],
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)', // Warna Hijau Asal
+                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
                         borderRadius: 6,
                         maxBarThickness: 50
                     }]
@@ -5507,23 +5594,29 @@ function renderOverallAnalysis() {
                     scales: { y: { min: 0, max: 100 } },
                     animation: {
                         onComplete: function(animation) {
-                            const chartInstance = animation.chart;
-                            const ctx = chartInstance.ctx;
-                            ctx.textAlign = 'center';
-                            ctx.textBaseline = 'bottom';
-                            ctx.fillStyle = '#1e293b';
-                            ctx.font = 'bold 13px Inter';
-                            chartInstance.data.datasets.forEach(function(dataset, i) {
-                                const meta = chartInstance.getDatasetMeta(i);
+                            const currentChart = animation.chart;
+                            const context = currentChart.ctx;
+                            context.textAlign = 'center';
+                            context.textBaseline = 'bottom';
+                            context.fillStyle = '#1e293b';
+                            context.font = 'bold 13px Inter';
+                            currentChart.data.datasets.forEach(function(dataset, i) {
+                                const meta = currentChart.getDatasetMeta(i);
                                 meta.data.forEach(function(bar, index) {
                                     const data = dataset.data[index] + '%';
-                                    ctx.fillText(data, bar.x, bar.y - 5);
+                                    context.fillText(data, bar.x, bar.y - 5);
                                 });
                             });
                         }
                     }
                 }
             });
+
+            if (canvasId === 'smrc-progress-chart') {
+                studentChartInstance = newChart;
+            } else {
+                chartInstance = newChart;
+            }
         }
 
 function printStudentReport() {
@@ -5540,10 +5633,13 @@ function printStudentReport() {
             const trendIndicator = document.getElementById('rc-trend-indicator')?.innerHTML || "";
             const averageSubtext = document.getElementById('rc-average-subtext')?.innerText || "";
             
-          const weaknessTagsHTML = document.getElementById('rc-weakness-tags')?.innerHTML || "";
+            const weaknessTagsHTML = document.getElementById('rc-weakness-tags')?.innerHTML || "";
            let cadanganFokus = document.getElementById('rc-cadangan-fokus')?.innerHTML || "";
             
-            // PENYELESAIAN MUKTAMAD: Sembunyikan notis "Menunjukkan kesalahan khusus..." ATAU ayat lalai dari cetakan PDF!
+            // PDF tidak lagi perlu menukar nama, ia kekal sebagai Analisis Kelemahan
+            const weaknessTitle = "Analisis Kelemahan & Cadangan Fokus";
+            
+            // Sembunyikan notis 'Sila klik' ATAU ayat lalai dari cetakan PDF
             let hideFocusStyle = "";
             if (cadanganFokus.includes("Tunjukkan Keseluruhan") || cadanganFokus.includes("Sila lakukan latihan bacaan dengan lebih perlahan dan teliti")) {
                 hideFocusStyle = "display: none;";
@@ -5698,9 +5794,9 @@ function printStudentReport() {
                         <span class="text-[9px] text-emerald-100 block">${averageSubtext}</span>
                     </div>
 
-               <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 col-span-2 space-y-3 flex flex-col justify-between">
+                <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 col-span-2 space-y-3 flex flex-col justify-between">
                         <div>
-                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-2">Kamus Kelemahan Peribadi (Latihan Terkini)</span>
+                            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 block mb-2">${weaknessTitle}</span>
                             <!-- max-h-36 dan overflow-y-auto dibuang di sini supaya senarai kelemahan melebar penuh secara menegak tanpa skrol dalam PDF -->
                             <div class="space-y-1.5">
                                 ${weaknessTagsHTML}
@@ -5711,6 +5807,7 @@ function printStudentReport() {
                             <div class="text-[11px] text-slate-700 font-semibold">${cadanganFokus}</div>
                         </div>
                     </div>
+
                 </div>
 
                 <!-- Grafik Kemajuan (Menggunakan Data Gambar PNG Statis - Solusi Masalah Grafik Kosong!) -->
