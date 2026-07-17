@@ -1182,11 +1182,11 @@
             { id: "3", name: "Muhammad Harith bin Imran", ic: "140212081133", school: "SK Jawi Pintar", class: "4 Dedikasi", supervisor: "Cikgu Fatimah", image: "" }
         ];
 
-        // Rekod topik pembelajaran asas
+         // Rekod topik pembelajaran asas (Versi English)
         let mockTopics = [
-            { id: "101", title: "Huruf Tunggal Hijaiyah", difficulty: "1", jawiText: "ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف q ك ل م ن و ه ء ي", rumiText: "alif ba ta tha jim ha kha dal dhal ra zai sin shin sad dad ta za ain ghain fa qaf kaf lam mim nun waw ha hamzah ya" },
-            { id: "102", title: "Suku Kata Terbuka Mudah", difficulty: "2", jawiText: "ڬورو سکوله چنتيق ڤيڠڬن", rumiText: "gu-ru se-ko-lah can-tik ping-gan" },
-            { id: "103", title: "Adab Berkongsi Rezeki", difficulty: "3", jawiText: "بنتو راکن يڠ دالم کسوسهن برشکور اتس نعمت الله.", rumiText: "bantu rakan yang dalam kesusahan bersyukur atas nikmat Allah" }
+            { id: "101", title: "Alphabets A to Z", difficulty: "1", jawiText: "a b c d e f g h i j k l m n o p q r s t u v w x y z", rumiText: "a b c d e f g h i j k l m n o p q r s t u v w x y z" },
+            { id: "102", title: "Basic Greetings", difficulty: "3", jawiText: "good morning teacher how are you today", rumiText: "selamat pagi cikgu apa khabar awak hari ini" },
+            { id: "103", title: "My Pet Cat", difficulty: "4", jawiText: "i have a cute cat at home", rumiText: "saya ada seekor kucing comel di rumah" }
         ];
 
         // Log prestasi pembacaan asal
@@ -4518,11 +4518,8 @@ function renderPersonalStudentReport(customLogIds = null) {
                 { regex: /ه/g, replace: "haa" },
                 { regex: /ء/g, replace: "hamzah" },
 
-               // --- PEMBETULAN MELAYU (WAJIB LETAK DI SINI SUPAYA TIDAK DIGANGGU OLEH SISTEM HURUF JAWI) ---
-                { regex: /\bkarnival\b/gi, replace: "kar ni val" },
-                { regex: /\bkuiz\b/gi, replace: "kuwiz" },
-                { regex: /\bpameran\b/gi, replace: "pa <lang xml:lang='en-US'>may run</lang>" },
-                { regex: /\baktiviti\b/gi, replace: "akti fiti" }
+                // --- PEMBETULAN MELAYU / ENGLISH KHAS ---
+                { regex: /\bz\b/gi, replace: "zed" }, // PENYELESAIAN: Paksa sebutan Z tunggal menjadi "Zed" (UK/MY Standard)
             ];
             
             corrections.forEach(rule => {
@@ -4554,9 +4551,13 @@ function renderPersonalStudentReport(customLogIds = null) {
         let currentCloudAudio = null;
         let cloudAnimFrameId = null;
         
-        function fallbackStandardTTS(text, speed, isSync) {
+         function fallbackStandardTTS(text, speed, isSync) {
             if (!window.speechSynthesis) return;
-            const utterance = new SpeechSynthesisUtterance(text);
+            
+            // UBAT ZED: Paksa enjin peranti sebut 'zed'
+            let spokenText = text.replace(/\bz\b/gi, "zed");
+            
+            const utterance = new SpeechSynthesisUtterance(spokenText);
             utterance.rate = speed;
             utterance.lang = "en-US"; // Ditukar ke loghat Amerika
             if (isSync) {
@@ -4589,6 +4590,12 @@ function renderPersonalStudentReport(customLogIds = null) {
             let ssml = "<speak>";
             wordsArray.forEach((word, idx) => {
                 let cleanWord = word.replace(/-/g, ""); // Buang sengkang jika ada
+                
+                // UBAT ZED: Paksa AI baca 'zed' jika huruf Z berdiri bersendirian
+                if (cleanWord.toLowerCase() === 'z') {
+                    cleanWord = 'zed';
+                }
+                
                 ssml += `<mark name="w${idx}"/>${cleanWord} `;
             });
             ssml += "</speak>";
