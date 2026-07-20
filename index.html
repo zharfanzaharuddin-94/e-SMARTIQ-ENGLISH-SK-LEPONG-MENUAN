@@ -4202,15 +4202,17 @@ function renderPersonalStudentReport(customLogIds = null) {
             document.getElementById('smrc-average-score').innerText = reviewedLogs.length > 0 ? `${avgScore}%` : "N/A";
             document.getElementById('smrc-trend-indicator').innerHTML = calculateTrend(personalLogs, selectedMonth);
 
-            // SENARAI TERKINI -> LAMA UNTUK PAPARAN SEJARAH & KOTAK ANALISIS
-            let latestLogsDesc = [...reviewedLogs].reverse();
+              // SENARAI TERKINI -> LAMA UNTUK PAPARAN SEJARAH & KOTAK ANALISIS
+            // PENYELESAIAN: Gunakan allLogsAsc supaya rekod "Belum Disemak" tetap muncul di senarai tepi!
+            let latestLogsDesc = [...allLogsAsc].reverse();
             
             let uniqueTopicsLogs = [];
             if (customLogIds && customLogIds.length > 0) {
                 uniqueTopicsLogs = latestLogsDesc.filter(l => customLogIds.includes(String(l.id)));
                 showToast("Graf & Analisis dikemaskini mengikut sesi pilihan anda.", "success");
             } else {
-                uniqueTopicsLogs = latestLogsDesc; 
+                // Untuk Analisis Kelemahan, kita hanya paparkan yang telah disemak sahaja
+                uniqueTopicsLogs = latestLogsDesc.filter(l => l.isReviewed); 
             }
 
             let starHTML = "Belum Dinilai";
@@ -4406,9 +4408,10 @@ function renderPersonalStudentReport(customLogIds = null) {
            // GRAF DINAMIK: Gunakan log yang ditanda, atau jika kosong, papar semua sejarah
             let chartLogs = [];
             if (customLogIds && customLogIds.length > 0) {
-                chartLogs = uniqueTopicsLogs; // graphLogs sudah ditapis dengan customLogIds
+                chartLogs = uniqueTopicsLogs; 
             } else {
-                chartLogs = [...latestLogsDesc]; // Buang had .slice(0,5), papar semua sesi
+                // Elakkan graf menjunam ke 0% jika rekod belum disemak, papar yang disemak sahaja
+                chartLogs = latestLogsDesc.filter(l => l.isReviewed); 
             }
             
             // Reverse supaya urutan graf dari lama ke baru (Kiri ke Kanan)
@@ -4551,11 +4554,13 @@ function renderPersonalStudentReport(customLogIds = null) {
         let currentCloudAudio = null;
         let cloudAnimFrameId = null;
         
-         function fallbackStandardTTS(text, speed, isSync) {
+          function fallbackStandardTTS(text, speed, isSync) {
             if (!window.speechSynthesis) return;
             
-            // UBAT ZED: Paksa enjin peranti sebut 'zed'
+            // UBAT ZED & EMAIL: Paksa enjin peranti sebut 'zed', 'dot com', dan 'at'
             let spokenText = text.replace(/\bz\b/gi, "zed");
+            spokenText = spokenText.replace(/\.com/gi, " dot com");
+            spokenText = spokenText.replace(/@/g, " at ");
             
             const utterance = new SpeechSynthesisUtterance(spokenText);
             utterance.rate = speed;
@@ -4568,12 +4573,15 @@ function renderPersonalStudentReport(customLogIds = null) {
             window.speechSynthesis.speak(utterance);
         }
 
-        // 2. KOD ENJIN SUARA GOOGLE CLOUD TTS (KETEpatan 100% menggunakan SSML Timepoints)
+        // 2. KOD ENJIN SUARA GOOGLE CLOUD TTS (KETEpatan 100% menggunakan Audio Sinkronisasi Mutlak)
         async function executeCloudTTS(wordsArray, speed, isSync) {
-            // Matikan sebarang bunyi jika ada yang sedang dimainkan
+            // Matikan sebarang bunyi dan animasi jika ada yang sedang dimainkan
             if (currentCloudAudio) {
                 currentCloudAudio.pause();
                 currentCloudAudio = null;
+            }
+            if (window.cloudAnimFrameId) {
+                cancelAnimationFrame(window.cloudAnimFrameId);
             }
             if (window.speechSynthesis) window.speechSynthesis.cancel();
             clearWordHighlights();
@@ -4591,26 +4599,36 @@ function renderPersonalStudentReport(customLogIds = null) {
             wordsArray.forEach((word, idx) => {
                 let cleanWord = word.replace(/-/g, ""); // Buang sengkang jika ada
                 
-                // UBAT ZED: Paksa AI baca 'zed' jika huruf Z berdiri bersendirian
-                if (cleanWord.toLowerCase() === 'z') {
-                    cleanWord = 'zed';
+                // UBAT ZED: Paksa AI baca 'zed' jika huruf Z berdiri bersendirian (kalis koma)
+                if (cleanWord.toLowerCase() === 'z' || cleanWord.toLowerCase() === 'z,' || cleanWord.toLowerCase() === 'z.') {
+                    cleanWord = cleanWord.replace(/z/gi, 'zed');
                 }
+
+                // UBAT E-MEL (.com dan @): Tukar sebutan sebelum ia menjadi tanda rehat
+                cleanWord = cleanWord.replace(/\.com/gi, " dot com");
+                cleanWord = cleanWord.replace(/@/g, " at ");
+                
+                // JEDA KOMA DAN NOKTAH: Tambah arahan berhenti rehat (SSML Break) untuk Google Cloud
+                cleanWord = cleanWord.replace(/,/g, ", <break time='500ms'/>");
+                cleanWord = cleanWord.replace(/\./g, ". <break time='800ms'/>");
+                cleanWord = cleanWord.replace(/\?/g, "? <break time='800ms'/>");
+                cleanWord = cleanWord.replace(/!/g, "! <break time='800ms'/>");
                 
                 ssml += `<mark name="w${idx}"/>${cleanWord} `;
             });
             ssml += "</speak>";
 
- const payload = {
+
+             const payload = {
                 input: { ssml: ssml },
                 voice: { languageCode: "en-US", name: "en-US-Standard-C" }, // Suara English Amerika (sebutan R jelas)
                 audioConfig: { 
                     audioEncoding: "MP3",
-                    speakingRate: speed // Kelajuan diuruskan terus oleh pelayan Google
+                    speakingRate: 1.0 // Wajib kekal 1.0 supaya peta masa Google dijamin 100% tepat
                 },
                 enableTimePointing: ["SSML_MARK"] // Meminta Google memulangkan cap masa yang mutlak
             };
 
-            // PENYELESAIAN: Tukar v1 kepada v1beta1 kerana ciri pemasa kelipan hijau hanya disokong pada pelayan Beta
             const url = `https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${activeKey}`;
 
             try {
@@ -4631,14 +4649,23 @@ function renderPersonalStudentReport(customLogIds = null) {
                 const audioUrl = `data:audio/mp3;base64,${data.audioContent}`;
                 currentCloudAudio = new Audio(audioUrl);
                 
+                // PENYELESAIAN KUNCI: Enjin pelayar web (Browser) yang mengambil alih tugas memperlahankan / melajukan suara.
+                // Ini memaksa tempoh audio dan 'currentTime' meregang (stretch) secara harmoni dengan kelajuan.
+                currentCloudAudio.playbackRate = speed;
+                
                 currentCloudAudio.onloadedmetadata = () => {
-                    // Hanya aktifkan pengesan kelipan jika butang "Dengar Keseluruhan" ditekan
+
                     if (isSync && data.timepoints && data.timepoints.length > 0) {
-                        currentCloudAudio.ontimeupdate = () => {
+                        
+                        // PENYELESAIAN MUKTAMAD: Jejak audio menggunakan 'currentTime' audio itu sendiri + 60FPS.
+                        // Masa 'currentTime' tidak akan menipu kerana ia dibaca terus dari hardware audio peranti.
+                        function trackAudioProgress() {
+                            if (!currentCloudAudio || currentCloudAudio.paused || currentCloudAudio.ended) return;
+                            
                             const currentTime = currentCloudAudio.currentTime;
                             let activeIndex = -1;
                             
-                            // Cari perkataan mana yang sedang disebut berdasarkan cap masa dari pelayan Google
+                            // Semak waktu semasa berbanding Cap Masa (Timepoints) dari Google
                             for (let i = data.timepoints.length - 1; i >= 0; i--) {
                                 if (currentTime >= data.timepoints[i].timeSeconds) {
                                     activeIndex = parseInt(data.timepoints[i].markName.replace('w', ''));
@@ -4649,12 +4676,23 @@ function renderPersonalStudentReport(customLogIds = null) {
                             if (activeIndex !== -1) {
                                 highlightWordInBoard(activeIndex);
                             }
+                            
+                            window.cloudAnimFrameId = requestAnimationFrame(trackAudioProgress);
+                        }
+                        
+                        currentCloudAudio.onplay = () => {
+                            window.cloudAnimFrameId = requestAnimationFrame(trackAudioProgress);
+                        };
+
+                        currentCloudAudio.onpause = () => {
+                            if (window.cloudAnimFrameId) cancelAnimationFrame(window.cloudAnimFrameId);
                         };
                     }
                     currentCloudAudio.play();
                 };
 
                 currentCloudAudio.onended = () => {
+                    if (window.cloudAnimFrameId) cancelAnimationFrame(window.cloudAnimFrameId);
                     clearWordHighlights();
                 };
 
@@ -5317,14 +5355,16 @@ function renderOverallAnalysis() {
             document.getElementById('rc-trend-indicator').innerHTML = calculateTrend(personalLogs, selectedMonth);
 
             // SENARAI TERKINI -> LAMA UNTUK PAPARAN SEJARAH & KOTAK ANALISIS
-            let latestLogsDesc = [...reviewedLogs].reverse();
+            // PENYELESAIAN: Gunakan allLogsAsc supaya rekod "Belum Disemak" tetap muncul di senarai tepi!
+            let latestLogsDesc = [...allLogsAsc].reverse();
             
             let uniqueTopicsLogs = [];
             if (customLogIds && customLogIds.length > 0) {
                 uniqueTopicsLogs = latestLogsDesc.filter(l => customLogIds.includes(String(l.id)));
                 showToast("Graf & Analisis dikemaskini mengikut sesi pilihan anda.", "success");
             } else {
-                uniqueTopicsLogs = latestLogsDesc; 
+                // Untuk Analisis Kelemahan, kita hanya paparkan yang telah disemak sahaja
+                uniqueTopicsLogs = latestLogsDesc.filter(l => l.isReviewed); 
             }
 
             let starHTML = "Belum Dinilai";
@@ -5523,9 +5563,10 @@ function renderOverallAnalysis() {
           // GRAF DINAMIK: Gunakan log yang ditanda, atau jika kosong, papar semua sejarah
             let chartLogs = [];
             if (customLogIds && customLogIds.length > 0) {
-                chartLogs = uniqueTopicsLogs; // Jika ada pilihan, papar yang dipilih sahaja
+                chartLogs = uniqueTopicsLogs; 
             } else {
-                chartLogs = [...latestLogsDesc]; // Buang had .slice(0,5), papar semua sesi
+                // Elakkan graf menjunam ke 0% jika rekod belum disemak, papar yang disemak sahaja
+                chartLogs = latestLogsDesc.filter(l => l.isReviewed); 
             }
             
             // Susun graf dari Kiri (Lama) ke Kanan (Baru)
