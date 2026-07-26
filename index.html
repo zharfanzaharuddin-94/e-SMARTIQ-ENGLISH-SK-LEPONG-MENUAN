@@ -4716,8 +4716,13 @@ function renderPersonalStudentReport(customLogIds = null) {
             
             // Baca ayat Inggeris (yang tersimpan dalam pembolehubah jawiWord)
             let wordToSpeak = jawiWord; 
+            
+            // UBAT "THE": Paksa sebutan 'de' (ditulis fonetik thuh) jika diklik secara tunggal
+            if (wordToSpeak.toLowerCase() === "the") {
+                wordToSpeak = "thuh";
+            }
 
-            // Hantar ke Azure
+            // Hantar ke enjin suara
             executeCloudTTS([wordToSpeak], speed, false);
             
             setTimeout(() => buttonEl.classList.remove('audio-highlight-active'), 1000);
