@@ -1310,20 +1310,21 @@ window.onload = async function() {
                 AppStorage.setItem('sync_lock_guru', Date.now().toString());
             }
             
-            // =============================================================
-            // KOD YANG TERTINGGAL SEBELUM INI: ARAHAN MENARIK TOPIK
-            // =============================================================
-            if (now - parseInt(AppStorage.getItem('sync_lock_topik') || "0") >= LOCK_DURATION) {
-                await muatTurunTopicsDariSheet();
-                AppStorage.setItem('sync_lock_topik', Date.now().toString());
-            }
-            // =============================================================
+           // =============================================================
+                // KOD YANG TERTINGGAL SEBELUM INI: ARAHAN MENARIK TOPIK
+                // =============================================================
+                if (now - parseInt(AppStorage.getItem('sync_lock_topik') || "0") >= LOCK_DURATION) {
+                    await muatTurunTopicsDariSheet();
+                    AppStorage.setItem('sync_lock_topik', Date.now().toString());
+                }
+                // =============================================================
 
-            if (now - parseInt(AppStorage.getItem('sync_lock_skor') || "0") >= LOCK_DURATION) {
+                // PENYELESAIAN MUTLAK: Buang mangga (lock) 5 minit untuk Skor Latihan.
+                // Skor mesti ditarik secara "Live" setiap kali portal dibuka atau di-refresh!
                 await muatTurunSkorDariSheet();
                 AppStorage.setItem('sync_lock_skor', Date.now().toString());
-            }
-            console.log("✅ Penyegerakan awan stabil. Semua selesai disemak di latar belakang.");
+                
+                console.log("✅ Penyegerakan awan stabil. Semua selesai disemak di latar belakang.");
         } catch (e) {
             console.warn("Gagal menghubungi awan. Sistem terus menggunakan data selamat lokal:", e);
         }
