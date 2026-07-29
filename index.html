@@ -4635,21 +4635,50 @@ function renderPersonalStudentReport(customLogIds = null) {
             const url = `https://texttospeech.googleapis.com/v1beta1/text:synthesize?key=${activeKey}`;
 
             try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error?.message || `Ralat API: ${response.status}`);
+                // =========================================================================
+                // BANK MEMORI AUDIO (GOOGLE CLOUD TTS LOKAL)
+                // =========================================================================
+                // Cipta "Kunci Unik" berdasarkan teks SSML yang dihantar
+                let hash = 0;
+                for (let i = 0; i < ssml.length; i++) {
+                    hash = ((hash << 5) - hash) + ssml.charCodeAt(i);
+                    hash |= 0;
                 }
-
-                const data = await response.json();
+                const cacheKey = "audio_gcloud_eng_" + (isSync ? "sync_" : "async_") + hash;
                 
-                // Mainkan audio MP3 Base64 secara terus menggunakan Data URI
-                const audioUrl = `data:audio/mp3;base64,${data.audioContent}`;
+                let audioUrl;
+                let timepointsData = null;
+                
+                // Semak Bank Memori IndexedDB
+                const cachedData = await idb.get(cacheKey);
+
+                if (cachedData) {
+                    console.log("♻️ [Bank Memori Aktif] Memainkan audio Google Cloud dari memori peranti secara percuma!");
+                    const parsed = JSON.parse(cachedData);
+                    audioUrl = `data:audio/mp3;base64,${parsed.audioContent}`;
+                    if (isSync) timepointsData = parsed.timepoints;
+                } else {
+                    console.log("📡 [Google Cloud] Menjana audio baharu (Kuota API digunakan)...");
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        const errData = await response.json();
+                        throw new Error(errData.error?.message || `Ralat API: ${response.status}`);
+                    }
+
+                    const data = await response.json();
+                    audioUrl = `data:audio/mp3;base64,${data.audioContent}`;
+                    timepointsData = data.timepoints;
+                    
+                    // Simpan fail Audio ke Bank Memori untuk kegunaan masa depan
+                    idb.set(cacheKey, JSON.stringify({ audioContent: data.audioContent, timepoints: data.timepoints }));
+                }
+                // =========================================================================
+
                 currentCloudAudio = new Audio(audioUrl);
                 
                 // PENYELESAIAN KUNCI: Enjin pelayar web (Browser) yang mengambil alih tugas memperlahankan / melajukan suara.
@@ -4658,7 +4687,7 @@ function renderPersonalStudentReport(customLogIds = null) {
                 
                 currentCloudAudio.onloadedmetadata = () => {
 
-                    if (isSync && data.timepoints && data.timepoints.length > 0) {
+                    if (isSync && timepointsData && timepointsData.length > 0) {
                         
                         // PENYELESAIAN MUKTAMAD: Jejak audio menggunakan 'currentTime' audio itu sendiri + 60FPS.
                         // Masa 'currentTime' tidak akan menipu kerana ia dibaca terus dari hardware audio peranti.
@@ -4669,9 +4698,9 @@ function renderPersonalStudentReport(customLogIds = null) {
                             let activeIndex = -1;
                             
                             // Semak waktu semasa berbanding Cap Masa (Timepoints) dari Google
-                            for (let i = data.timepoints.length - 1; i >= 0; i--) {
-                                if (currentTime >= data.timepoints[i].timeSeconds) {
-                                    activeIndex = parseInt(data.timepoints[i].markName.replace('w', ''));
+                            for (let i = timepointsData.length - 1; i >= 0; i--) {
+                                if (currentTime >= timepointsData[i].timeSeconds) {
+                                    activeIndex = parseInt(timepointsData[i].markName.replace('w', ''));
                                     break;
                                 }
                             }
