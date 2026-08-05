@@ -147,25 +147,29 @@
 
     <script>
         // =========================================================================
-        // SISTEM PEMBERSIH CACHE TEGAR (DIMATIKAN SEMENTARA UNTUK UJIAN GEMINI)
+        // SISTEM PEMBERSIH CACHE TEGAR (NAIK TARAF: KALIS GEMINI & MUKA MASAM)
         // =========================================================================
-        /*
         (function() {
-            if (window.location.hostname.includes("github.io")) {
-                const APP_VERSION = "2.1"; // TUKAR NOMBOR INI BILA NAK PUSH KE GITHUB
-                const currentVersion = localStorage.getItem('esmartiq_version');
+            const APP_VERSION = "2.1"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
+            const currentVersion = localStorage.getItem('esmartiq_version');
+            
+            if (currentVersion !== APP_VERSION) {
+                // Simpan versi baharu untuk mengelakkan pusingan tanpa henti (loop)
+                localStorage.setItem('esmartiq_version', APP_VERSION);
                 
-                if (currentVersion !== APP_VERSION) {
-                    localStorage.setItem('esmartiq_version', APP_VERSION);
-                    try { indexedDB.deleteDatabase('ESmartIQ_ENG_DB'); } catch(e){}
-                    
-                    if (window.location.search.indexOf('v=' + APP_VERSION) === -1) {
-                        window.location.replace(window.location.pathname + "?v=" + APP_VERSION);
-                    }
-                }
+                // PADAM SEMUA CACHE LAMA TERMASUK URL TETAPAN YANG SALAH (Punca audio hilang!)
+                localStorage.removeItem('e_smart_eng_settings');
+                localStorage.removeItem('e_smart_eng_logs');
+                localStorage.removeItem('e_smart_eng_topics');
+                localStorage.removeItem('e_smart_eng_students');
+                
+                // Padam pangkalan data IndexedDB
+                try { indexedDB.deleteDatabase('ESmartIQ_ENG_DB'); } catch(e){}
+                
+                // Refresh skrin SEKALI SAHAJA secara normal (Sangat selamat untuk Gemini & GitHub)
+                window.location.reload();
             }
         })();
-        */
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
