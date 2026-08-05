@@ -150,7 +150,7 @@
         // SISTEM PEMBERSIH CACHE TEGAR (KALIS CRASH GEMINI WORKSPACE SEPENUHNYA)
         // =========================================================================
         (function() {
-            const APP_VERSION = "2.4"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
+            const APP_VERSION = "2.5"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
             const currentVersion = localStorage.getItem('esmartiq_version');
             
             if (currentVersion !== APP_VERSION) {
@@ -1110,9 +1110,6 @@
                                 <div class="flex items-center gap-2">
                                     <button onclick="generateCustomGraph('smrc')" id="btn-graph-selected-smrc" class="hidden bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all border border-indigo-200 flex items-center gap-1.5 shadow-sm">
                                         <i class="fa-solid fa-chart-line"></i> Bina Graf
-                                    </button>
-                                    <button onclick="deleteSelectedLogs('smrc')" id="btn-delete-selected-smrc" class="hidden bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all border border-rose-200 flex items-center gap-1.5 shadow-sm">
-                                        <i class="fa-solid fa-trash-can"></i> Padam Pilihan
                                     </button>
                                     <button onclick="renderPersonalStudentReport()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-3 py-1.5 rounded-lg text-[10px] transition-all flex items-center gap-1.5 shadow-sm">
                                         <i class="fa-solid fa-arrows-rotate"></i> Reset Keseluruhan
