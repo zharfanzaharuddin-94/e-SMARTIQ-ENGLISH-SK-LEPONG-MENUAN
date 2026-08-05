@@ -3899,35 +3899,10 @@ function saveLiveManualGrading() {
 
           document.getElementById('exercise-suggestions-text').innerHTML = suggestionsHTML;
 
-            // PENYELESAIAN MUKTAMAD: Cari log murid yang sedang aktif dan kemas kini, JANGAN buat ID baru atau padam audio!
+            // PENYELESAIAN MUKTAMAD: Mod Penilaian Bersemuka (Live) akan SENTIASA mencipta rekod baharu secara mutlak.
             const logs = JSON.parse(AppStorage.getItem('e_smart_eng_logs')) || [];
-            
-            // Cari rekod yang paling terkini (yang baru direkod oleh murid tadi)
-            let existingIndex = -1;
-            for (let i = logs.length - 1; i >= 0; i--) {
-                if (String(logs[i].topicId) === String(topicId) && String(logs[i].studentIc) === String(currentActiveUser.ic)) {
-                    existingIndex = i;
-                    break;
-                }
-            }
 
-           if (existingIndex !== -1) {
-            // UPDATE REKOD SEDIA ADA (Jika murid ada merakam)
-            logs[existingIndex].score = finalScore;
-            logs[existingIndex].manualScore = finalScore;
-            logs[existingIndex].jeda = assumedJeda;
-            logs[existingIndex].stuckCount = tags.filter(t => t.includes('Sangkut')).length;
-            logs[existingIndex].tertinggal = tags.filter(t => t.includes('Tinggal')).length;
-            logs[existingIndex].audioGuru = tTeacherAudioBase64 || ""; 
-            logs[existingIndex].weaknessTags = tags;
-            logs[existingIndex].wordStates = currentWordStates;
-            logs[existingIndex].isReviewed = true;
-            logs[existingIndex].statusSemakan = "DISEMAK";
-
-            AppStorage.setItem('e_smart_eng_logs', JSON.stringify(logs));
-            syncToGoogleSheets('SKOR LATIHAN', logs[existingIndex], 'UPDATE');
-        } else {
-            // REKOD LIVE MODE TULEN (Cipta rekod baru)
+            // REKOD LIVE MODE TULEN (Tiada kaitan dengan sebarang rakaman audio)
             const newLog = {
                 id: "LOG_" + Date.now().toString(), 
                 studentIc: currentActiveUser.ic,
@@ -3938,32 +3913,34 @@ function saveLiveManualGrading() {
                 stuckCount: tags.filter(t => t.includes('Sangkut')).length,
                 tertinggal: tags.filter(t => t.includes('Tinggal')).length,
                 date: new Date().toISOString().split('T')[0],
-                audioUrl: "", // Dikosongkan! (Kunci utama supaya butang Semak TIDAK MUNCUL di laporan)
+                audioUrl: "", // Dikosongkan! (Kunci utama supaya Apps Script tidak crash & butang Semak tidak muncul)
                 audioGuru: tTeacherAudioBase64 || "", 
                 weaknessTags: tags,
                 wordStates: currentWordStates, 
                 isReviewed: true,
                 statusSemakan: "DISEMAK" 
             };
+            
             logs.push(newLog);
             AppStorage.setItem('e_smart_eng_logs', JSON.stringify(logs));
+            
+            // Hantar data ini sebagai rekod LATIHAN BAHARU (INSERT)
             syncToGoogleSheets('SKOR LATIHAN', newLog, 'INSERT');
-        }
         
-        showToast("Markah penilaian manual guru disimpan secara live!", "success");
-        
-        // 1. Tutup Mod Guru di kawasan bacaan murid dengan kemas
-        if (isTeacherMarkingMode) {
-            toggleTeacherMarkingMode();
+            showToast("Markah penilaian manual guru disimpan secara live!", "success");
+            
+            // 1. Tutup Mod Guru di kawasan bacaan murid dengan kemas
+            if (isTeacherMarkingMode) {
+                toggleTeacherMarkingMode();
+            }
+            
+            // 2. Refresh paparan Laporan Prestasi mengikut siapa yang sedang log masuk
+            if (currentRole === 'teacher') {
+                selectStudentForReportCard(currentActiveUser.ic); 
+            } else {
+                renderPersonalStudentReport();
+            }
         }
-        
-        // 2. Refresh paparan Laporan Prestasi mengikut siapa yang sedang log masuk
-        if (currentRole === 'teacher') {
-            selectStudentForReportCard(currentActiveUser.ic); 
-        } else {
-            renderPersonalStudentReport();
-        }
-    }
 
         /* ==========================================================================
            10. PRACTICE ZONE & STUDENTS READ BOARD
