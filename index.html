@@ -146,28 +146,30 @@
     </div>
 
     <script>
-        // =========================================================================
-        // SISTEM PEMBERSIH CACHE TEGAR (NAIK TARAF: KALIS GEMINI & MUKA MASAM)
+       // =========================================================================
+        // SISTEM PEMBERSIH CACHE TEGAR (KALIS CRASH GEMINI WORKSPACE SEPENUHNYA)
         // =========================================================================
         (function() {
-            const APP_VERSION = "2.2"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
+            const APP_VERSION = "2.3"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
             const currentVersion = localStorage.getItem('esmartiq_version');
             
             if (currentVersion !== APP_VERSION) {
-                // Simpan versi baharu untuk mengelakkan pusingan tanpa henti (loop)
+                // Simpan versi baharu
                 localStorage.setItem('esmartiq_version', APP_VERSION);
                 
-                // PADAM SEMUA CACHE LAMA TERMASUK URL TETAPAN YANG SALAH (Punca audio hilang!)
+                // Padam cache secara diam-diam (Tidak mengganggu skrin)
                 localStorage.removeItem('e_smart_eng_settings');
                 localStorage.removeItem('e_smart_eng_logs');
                 localStorage.removeItem('e_smart_eng_topics');
                 localStorage.removeItem('e_smart_eng_students');
-                
-                // Padam pangkalan data IndexedDB
                 try { indexedDB.deleteDatabase('ESmartIQ_ENG_DB'); } catch(e){}
                 
-                // Refresh skrin SEKALI SAHAJA secara normal (Sangat selamat untuk Gemini & GitHub)
-                window.location.reload();
+                // KUNCI UTAMA: Hanya jalankan "reload" jika portal berada di GitHub atau Localhost.
+                // Jika di dalam Gemini (iframe), JANGAN reload supaya sistem tidak terputus (Crash)!
+                const currentHost = window.location.hostname;
+                if (currentHost.includes("github.io") || currentHost.includes("localhost") || currentHost.includes("127.0.0.1")) {
+                    window.location.reload();
+                }
             }
         })();
 
