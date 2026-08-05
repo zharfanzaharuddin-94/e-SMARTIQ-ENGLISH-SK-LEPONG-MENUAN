@@ -1316,10 +1316,10 @@ window.onload = async function() {
     if (document.getElementById('guru-email')) document.getElementById('guru-email').value = guru.email || "";
 
     // =========================================================================
-    // KUNCI KEBAL 5 MINIT & PENYEGERAKAN BERATUR (QUEUE BACKGROUND SYNC)
+    // KUNCI KEBAL 1 MINIT & PENYEGERAKAN BERATUR (QUEUE BACKGROUND SYNC)
     // =========================================================================
     const now = Date.now();
-    const LOCK_DURATION = 300000; // 5 Minit
+    const LOCK_DURATION = 60000; // 1 Minit (Masa menunggu diturunkan supaya lebih responsif)
     
     // PUNCA MASALAH: Sebelum ini 4 request dihantar serentak menyebabkan pelayan Google
     // menyekat aplikasi (sekejap dapat, sekejap kosong).
@@ -1402,7 +1402,7 @@ async function muatTurunDataMuridDariSheet() {
         
         const parsedData = parseCSVToObjects(csvText);
         
-        if (parsedData && parsedData.length > 0) {
+        if (parsedData) {
             // Pemetaan laju mengikut urutan lajur di Google Sheet
             const formattedStudents = parsedData.map(row => ({
                 id: row._raw[0] || "",
@@ -1414,12 +1414,11 @@ async function muatTurunDataMuridDariSheet() {
                 image: row._raw[6] || ""
             })).filter(s => s.name !== ""); // Tapisan keselamatan: Buang jika tiada nama
 
-            if (formattedStudents.length > 0) {
-                AppStorage.setItem('e_smart_eng_students', JSON.stringify(formattedStudents));
-                renderStudentTable();
-                populateClassFilters();
-                console.log("✅ Data murid berjaya disegerakkan kilat dari CSV Awam!");
-            }
+            // KOD BAHARU: Buang syarat length > 0 supaya memori telefon dikosongkan apabila rekod habis dipadam
+            AppStorage.setItem('e_smart_eng_students', JSON.stringify(formattedStudents));
+            renderStudentTable();
+            populateClassFilters();
+            console.log("✅ Data murid berjaya disegerakkan kilat dari CSV Awam!");
         }
     } catch (error) {
         console.error("Gagal menyegerakkan CSV Murid:", error);
@@ -1484,7 +1483,8 @@ async function muatTurunTopicsDariSheet() {
 
         const result = JSON.parse(rawText);
 
-        if (result.status === "success" && result.data && result.data.length > 0) {
+        // KOD BAHARU: Buang syarat length > 0 supaya pemadaman topik terakhir turut memadam data di telefon
+        if (result.status === "success" && result.data) {
             // KUNCI MEMORI DITUKAR KEPADA VERSI ENGLISH
             AppStorage.setItem('e_smart_eng_topics', JSON.stringify(result.data));
             AppStorage.setItem('e_smart_eng_topics_exists_on_sheet', 'true');
@@ -1528,8 +1528,8 @@ async function muatTurunSkorDariSheet() {
             cache: 'no-store' // KUASA PENUH: Haramkan penggunaan cache pelayar
         });
         const result = await response.json();
-        // JAMINAN MUTLAK: Hanya override jika terdapat rekod latihan di Google Sheet
-        if (result.status === "success" && result.data && result.data.length > 0) {
+        // JAMINAN MUTLAK: Override data sentiasa, walaupun Google Sheet sudah menjadi kosong (padam rekod terakhir)
+        if (result.status === "success" && result.data) {
             
             // ==========================================
             // KOD BAHARU: PENYELARASAN JENIS DATA MUTLAK
