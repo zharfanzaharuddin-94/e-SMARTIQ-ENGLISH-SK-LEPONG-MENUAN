@@ -1221,7 +1221,7 @@
       // Konfigurasi API - Sila letakkan URL GAS anda secara tetap di sini!
 let systemSettings = {
     apiKey: "AIzaSyADqO_bgmfx3Kb9WGW9bsh0eWUjeMUPk8k",
-    gasUrl: "https://script.google.com/macros/s/AKfycby9ibw0cm_HQufcWIuACRoQ34S8CHLrymHWqPUwuNGx0mWLFy4nmavnFCVUB_5gdxh8Ig/exec"
+    gasUrl: "https://script.google.com/macros/s/AKfycbwR3gCmi6ObemsmwEYcdA37YXPs7sUdQ8y3hgFrudh8NNo9jHldGaDsnZE3XhGhFglCOg/exec"
 };
 
         // Pemboleh ubah keadaan (State Variables)
@@ -1544,12 +1544,27 @@ async function muatTurunSkorDariSheet() {
                     reviewed = (reviewed.toLowerCase() === 'true');
                 }
                 
+                // KOD BAHARU: Penukar Pautan Google Drive supaya boleh dimainkan terus di dalam elemen <audio> HTML
+                let cleanAudio = log.audioUrl;
+                if (typeof cleanAudio === 'string' && cleanAudio.includes("drive.google.com/file/d/")) {
+                    const match = cleanAudio.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                    if (match && match[1]) cleanAudio = `https://drive.google.com/uc?export=download&id=${match[1]}`;
+                }
+                
+                let cleanAudioGuru = log.audioGuru;
+                if (typeof cleanAudioGuru === 'string' && cleanAudioGuru.includes("drive.google.com/file/d/")) {
+                    const match = cleanAudioGuru.match(/\/d\/([a-zA-Z0-9_-]+)/);
+                    if (match && match[1]) cleanAudioGuru = `https://drive.google.com/uc?export=download&id=${match[1]}`;
+                }
+
                 return {
                     ...log,
                     // PENYELESAIAN MUKTAMAD: Membasuh bersih kotoran koma atas (') dan ruang jarak tersembunyi dari Google Sheet
                     studentIc: String(log.studentIc).replace(/^'/, '').trim(),
                     topicId: String(log.topicId).replace(/^'/, '').trim(),
                     date: String(log.date).replace(/^'/, '').trim(),
+                    audioUrl: cleanAudio, // Pautan Drive sedia untuk dimainkan
+                    audioGuru: cleanAudioGuru, // Pautan Drive sedia untuk dimainkan
                     weaknessTags: Array.isArray(tags) ? tags : [],
                     isReviewed: Boolean(reviewed),
                     score: Number(log.score) || 0,
@@ -3511,11 +3526,8 @@ function saveTeacherManualScore() {
                             reader.onloadend = function() {
                                 let base64Result = reader.result;
                                 
-                                // KOD BARU & MUKTAMAD: PERISAI KESELAMATAN GOOGLE SHEET (MAX 49,000 AKSARA)
-                                if (base64Result.length > 49000) {
-                                    console.warn("Rakaman panjang: Audio dipotong untuk dimuatkan ke dalam Google Sheet");
-                                    base64Result = base64Result.substring(0, 49000);
-                                }
+                                // PENYELESAIAN GOOGLE DRIVE: Perisai pemotong 49,000 aksara DIBUANG sepenuhnya.
+                                // Sistem bebas menghantar rakaman saiz penuh (hingga 5 minit) ke Apps Script.
                                 
                                 tTeacherAudioBase64 = base64Result;
                                 document.getElementById('teacher-audio-preview').src = tTeacherAudioBase64;
@@ -3531,15 +3543,7 @@ function saveTeacherManualScore() {
                             document.getElementById('teacher-soundwave-container').classList.add('hidden');
                         };
 
-                        tTeacherMediaRecorder.start(250);
-                        
-                        // KOD BARU: Auto-berhenti selepas 8 saat supaya data tak gemuk dan lepas masuk Sheet!
-                        setTimeout(() => {
-                            if (tTeacherMediaRecorder && tTeacherMediaRecorder.state === "recording") {
-                                tTeacherMediaRecorder.stop();
-                                showToast("Masa tamat! Rakaman dihentikan (Had 8 saat).", "warning");
-                            }
-                        }, 8000);
+                        tTeacherMediaRecorder.start(250); // Mengambil data setiap 250ms
 
                         btn.classList.remove('bg-indigo-100', 'text-indigo-700');
                         btn.classList.add('bg-rose-100', 'text-rose-700', 'animate-pulse');
@@ -3866,19 +3870,19 @@ function saveLiveManualGrading() {
 
        // KOD BARU: Kekalkan ID lama untuk proses UPDATE supaya ia tidak wujudkan rekod bertindih
             const newLog = {
-                id: editingLogId, 
-                studentIc: logs[index].studentIc,
-                topicId: logs[index].topicId,
+                id: "LOG_" + Date.now().toString(), 
+                studentIc: currentActiveUser.ic,
+                topicId: topicId,
                 score: finalScore,
                 manualScore: finalScore,
                 jeda: assumedJeda,
                 stuckCount: tags.filter(t => t.includes('Sangkut')).length,
                 tertinggal: tags.filter(t => t.includes('Tinggal')).length,
-                date: logs[index].date,
-                audioUrl: logs[index].audioUrl, // Jaga audio asal murid supaya tak terpadam
-                audioGuru: tTeacherAudioBase64, // Tarik Base64 Audio Guru
-                weaknessTags: tags,
-                wordStates: currentWordStates,
+                date: new Date().toISOString().split('T')[0],
+                audioUrl: "", 
+                audioGuru: tTeacherAudioBase64, // KOD BARU: Simpan audio guru untuk Mod Live Grading
+                 weaknessTags: tags,
+                 wordStates: currentWordStates, // KOD PENYELAMAT 1B: Masukkan karung ke dalam memori
                 isReviewed: true,
                 statusSemakan: "DISEMAK" 
             };
@@ -4134,9 +4138,15 @@ function displayActiveLatihan() {
             if (!mediaRecorder || mediaRecorder.state === "inactive") {
                 navigator.mediaDevices.getUserMedia({ audio: true })
                     .then(stream => {
-                        // PENYELESAIAN 1: Biarkan pelayar/telefon guna format aslinya sendiri.
-                        // Jangan paksa letak options (webm/mp4), ini mengelakkan audio menjadi bisu.
-                        mediaRecorder = new MediaRecorder(stream);
+                        // KOD BARU: Pasang Enjin Pemampat (12kbps) pada suara murid supaya muat Google Sheet
+                        let options = {};
+                        try {
+                            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                                options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 12000 };
+                            }
+                        } catch (e) {}
+
+                        mediaRecorder = new MediaRecorder(stream, options);
                         audioChunks = [];
                         
                         mediaRecorder.ondataavailable = e => {
@@ -4343,7 +4353,10 @@ function displayActiveLatihan() {
             // FASA 4 BAHARU: Tukar audioBlob kepada String Base64 untuk disimpan secara kekal ke Google Sheets
             const reader = new FileReader();
             reader.onloadend = function() {
-                const base64Audio = reader.result; 
+                let base64Audio = reader.result; 
+                
+                // PENYELESAIAN GOOGLE DRIVE: Perisai pemotong 49,000 aksara DIBUANG sepenuhnya.
+                // Teks Base64 saiz penuh kini akan dihantar ke Apps Script untuk ditukar menjadi fail audio sebenar di Google Drive.
 
                const newLog = {
                     id: "LOG_" + Date.now().toString(),
