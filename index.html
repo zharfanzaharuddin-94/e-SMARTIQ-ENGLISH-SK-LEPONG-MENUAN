@@ -146,6 +146,27 @@
     </div>
 
     <script>
+        // =========================================================================
+        // SISTEM PEMBERSIH CACHE TEGAR (DIMATIKAN SEMENTARA UNTUK UJIAN GEMINI)
+        // =========================================================================
+        /*
+        (function() {
+            if (window.location.hostname.includes("github.io")) {
+                const APP_VERSION = "2.0"; // TUKAR NOMBOR INI BILA NAK PUSH KE GITHUB
+                const currentVersion = localStorage.getItem('esmartiq_version');
+                
+                if (currentVersion !== APP_VERSION) {
+                    localStorage.setItem('esmartiq_version', APP_VERSION);
+                    try { indexedDB.deleteDatabase('ESmartIQ_ENG_DB'); } catch(e){}
+                    
+                    if (window.location.search.indexOf('v=' + APP_VERSION) === -1) {
+                        window.location.replace(window.location.pathname + "?v=" + APP_VERSION);
+                    }
+                }
+            }
+        })();
+        */
+
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
