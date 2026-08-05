@@ -152,7 +152,7 @@
         /*
         (function() {
             if (window.location.hostname.includes("github.io")) {
-                const APP_VERSION = "2.0"; // TUKAR NOMBOR INI BILA NAK PUSH KE GITHUB
+                const APP_VERSION = "2.1"; // TUKAR NOMBOR INI BILA NAK PUSH KE GITHUB
                 const currentVersion = localStorage.getItem('esmartiq_version');
                 
                 if (currentVersion !== APP_VERSION) {
@@ -1248,7 +1248,7 @@
       // Konfigurasi API - Sila letakkan URL GAS anda secara tetap di sini!
 let systemSettings = {
     apiKey: "AIzaSyADqO_bgmfx3Kb9WGW9bsh0eWUjeMUPk8k",
-    gasUrl: "https://script.google.com/macros/s/AKfycbwR3gCmi6ObemsmwEYcdA37YXPs7sUdQ8y3hgFrudh8NNo9jHldGaDsnZE3XhGhFglCOg/exec"
+    gasUrl: "https://script.google.com/macros/s/AKfycbyhf5FitHJxauIERrKXdHg8MqehABmauoa1Kpjr3l0Pzz44noOAi3qWEfjskn1P0qwU5w/exec"
 };
 
         // Pemboleh ubah keadaan (State Variables)
@@ -3893,38 +3893,63 @@ function saveLiveManualGrading() {
                     </div>`;
             }
 
-            document.getElementById('exercise-suggestions-text').innerHTML = suggestionsHTML;
+          document.getElementById('exercise-suggestions-text').innerHTML = suggestionsHTML;
 
-       // KOD BARU: Kekalkan ID lama untuk proses UPDATE supaya ia tidak wujudkan rekod bertindih
-            const newLog = {
-                id: "LOG_" + Date.now().toString(), 
-                studentIc: currentActiveUser.ic,
-                topicId: topicId,
-                score: finalScore,
-                manualScore: finalScore,
-                jeda: assumedJeda,
-                stuckCount: tags.filter(t => t.includes('Sangkut')).length,
-                tertinggal: tags.filter(t => t.includes('Tinggal')).length,
-                date: new Date().toISOString().split('T')[0],
-                audioUrl: "", 
-                audioGuru: tTeacherAudioBase64, // KOD BARU: Simpan audio guru untuk Mod Live Grading
-                 weaknessTags: tags,
-                 wordStates: currentWordStates, // KOD PENYELAMAT 1B: Masukkan karung ke dalam memori
-                isReviewed: true,
-                statusSemakan: "DISEMAK" 
-            };
+            // PENYELESAIAN MUKTAMAD: Cari log murid yang sedang aktif dan kemas kini, JANGAN buat ID baru atau padam audio!
+            const logs = JSON.parse(AppStorage.getItem('e_smart_eng_logs')) || [];
+            
+            // Cari rekod yang paling terkini (yang baru direkod oleh murid tadi)
+            let existingIndex = -1;
+            for (let i = logs.length - 1; i >= 0; i--) {
+                if (String(logs[i].topicId) === String(topicId) && String(logs[i].studentIc) === String(currentActiveUser.ic)) {
+                    existingIndex = i;
+                    break;
+                }
+            }
 
-            // Tindih log lama dengan log baharu yang dah disemak di dalam IndexedDB
-            logs[index] = newLog;
-            AppStorage.setItem('e_smart_eng_logs', JSON.stringify(logs));
+            if (existingIndex !== -1) {
+                // UPDATE REKOD SEDIA ADA (Pelihara Audio Murid!)
+                logs[existingIndex].score = finalScore;
+                logs[existingIndex].manualScore = finalScore;
+                logs[existingIndex].jeda = assumedJeda;
+                logs[existingIndex].stuckCount = tags.filter(t => t.includes('Sangkut')).length;
+                logs[existingIndex].tertinggal = tags.filter(t => t.includes('Tinggal')).length;
+                logs[existingIndex].audioGuru = tTeacherAudioBase64; // Masukkan rakaman baharu guru
+                logs[existingIndex].weaknessTags = tags;
+                logs[existingIndex].wordStates = currentWordStates;
+                logs[existingIndex].isReviewed = true;
+                logs[existingIndex].statusSemakan = "DISEMAK";
 
-            // Arahkan awan Google buat proses kemas kini (UPDATE) ke atas ID yang sama
-            syncToGoogleSheets('SKOR LATIHAN', newLog, 'UPDATE');
+                AppStorage.setItem('e_smart_eng_logs', JSON.stringify(logs));
+                syncToGoogleSheets('SKOR LATIHAN', logs[existingIndex], 'UPDATE');
+                selectStudentForReportCard(logs[existingIndex].studentIc); 
+            } else {
+                // Jika atas sebab tertentu tiada rekod lama, baru buat rekod baharu
+                const newLog = {
+                    id: "LOG_" + Date.now().toString(), 
+                    studentIc: currentActiveUser.ic,
+                    topicId: topicId,
+                    score: finalScore,
+                    manualScore: finalScore,
+                    jeda: assumedJeda,
+                    stuckCount: tags.filter(t => t.includes('Sangkut')).length,
+                    tertinggal: tags.filter(t => t.includes('Tinggal')).length,
+                    date: new Date().toISOString().split('T')[0],
+                    audioUrl: "", 
+                    audioGuru: tTeacherAudioBase64, 
+                    weaknessTags: tags,
+                    wordStates: currentWordStates, 
+                    isReviewed: true,
+                    statusSemakan: "DISEMAK" 
+                };
+                logs.push(newLog);
+                AppStorage.setItem('e_smart_eng_logs', JSON.stringify(logs));
+                syncToGoogleSheets('SKOR LATIHAN', newLog, 'INSERT');
+                selectStudentForReportCard(newLog.studentIc); 
+            }
             
             showToast("Markah penilaian manual guru disimpan secara live!", "success");
-            
             closeManualGradeTeacher();
-            selectStudentForReportCard(newLog.studentIc); 
         }
 
         /* ==========================================================================
