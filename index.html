@@ -1368,7 +1368,7 @@ function parseCSVToObjects(csvText) {
 
 // Fungsi Pembantu Baharu untuk memanggil data murid dari Google Sheet (GUNA CSV)
 async function muatTurunDataMuridDariSheet() {
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTkdd8opxl9_Zn8rQG_awCT3FqAwJMZX1zk3KrRe91EBc87AXCPTtRjUWGf5_4ZfxdITRSjvVzSO6_S/pub?gid=0&single=true&output=csv";
+    const csvUrl = "https://docs.google.com/spreadsheets/d/1dpP1GDvD-SOzO5_FRt7zljVlRUxNz-PdAyru-HDSJ3A/export?format=csv&gid=0";
     try {
         const t = new Date().getTime() + Math.floor(Math.random() * 10000); // Super-Rawak (Kalis Cache)
         const response = await fetch(`${csvUrl}&t=${t}`, { cache: 'no-store' });
@@ -1402,7 +1402,7 @@ async function muatTurunDataMuridDariSheet() {
 
 // FASA 2 BAHARU: Fungsi Pembantu untuk mendarat & memanggil data guru pentadbir dari Google Sheet (GUNA CSV)
 async function muatTurunDataGuruDariSheet() {
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTkdd8opxl9_Zn8rQG_awCT3FqAwJMZX1zk3KrRe91EBc87AXCPTtRjUWGf5_4ZfxdITRSjvVzSO6_S/pub?gid=1262156447&single=true&output=csv";
+    const csvUrl = "https://docs.google.com/spreadsheets/d/1dpP1GDvD-SOzO5_FRt7zljVlRUxNz-PdAyru-HDSJ3A/export?format=csv&gid=1262156447";
     try {
         const t = new Date().getTime() + Math.floor(Math.random() * 10000); 
         const response = await fetch(`${csvUrl}&t=${t}`, { cache: 'no-store' });
