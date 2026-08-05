@@ -23,6 +23,8 @@
     
     <!-- PDF.js for rendering PDF to Canvas for Gemini Vision AI -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <!-- Enjin HTML5-QRCode untuk Kamera Log Masuk Murid -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
     
     <script>
         tailwind.config = {
@@ -145,12 +147,30 @@
         </div>
     </div>
 
+    <!-- Custom QR Scanner Modal (Log Masuk Murid) -->
+    <div id="qr-scanner-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm hidden" style="direction: ltr;">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 transform scale-95 transition-all duration-300 relative">
+            <button onclick="closeQRScanner()" class="absolute top-4 right-4 text-slate-400 hover:text-rose-500 transition-colors z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm border border-slate-100">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="text-center mb-4 mt-2">
+                <div class="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center text-xl text-emerald-600 mx-auto mb-2">
+                    <i class="fa-solid fa-qrcode"></i>
+                </div>
+                <h3 class="font-bold text-slate-800 text-lg">Imbas Kod QR</h3>
+                <p class="text-xs text-slate-500 mt-1">Halakan kamera pada Kod QR Kad Murid untuk log masuk.</p>
+            </div>
+            <!-- Ruangan ini akan dihuni oleh kamera secara automatik -->
+            <div id="qr-reader" class="w-full rounded-2xl overflow-hidden border-2 border-emerald-100 mb-2 bg-slate-50"></div>
+        </div>
+    </div>
+
     <script>
-       // =========================================================================
+        // =========================================================================
         // SISTEM PEMBERSIH CACHE TEGAR (KALIS CRASH GEMINI WORKSPACE SEPENUHNYA)
         // =========================================================================
         (function() {
-            const APP_VERSION = "2.5"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
+            const APP_VERSION = "2.6"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
             const currentVersion = localStorage.getItem('esmartiq_version');
             
             if (currentVersion !== APP_VERSION) {
@@ -233,9 +253,15 @@
                     <p class="text-[10px] text-slate-400 mt-1.5 ml-1">Gunakan No. IC murid yang telah didaftarkan guru (cth: 151212085544)</p>
                 </div>
 
-                <button onclick="handleStudentLogin()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg hover:shadow-emerald-200 transition-all flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-door-open"></i> Log Masuk Portal Murid
-                </button>
+                <div class="flex gap-3">
+                    <button onclick="handleStudentLogin()" class="flex-grow bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg hover:shadow-emerald-200 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-door-open"></i> Log Masuk
+                    </button>
+                    <!-- Butang QR Baharu -->
+                    <button onclick="openQRScanner()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3.5 px-5 rounded-2xl shadow-sm border border-emerald-200 transition-all flex items-center justify-center gap-2" title="Imbas Kod QR Kamera">
+                        <i class="fa-solid fa-qrcode text-xl"></i>
+                    </button>
+                </div>
 
                 <div class="relative flex py-2 items-center">
                     <div class="flex-grow border-t border-slate-100"></div>
@@ -1681,8 +1707,54 @@ async function muatTurunSkorDariSheet() {
 
 
         /* ==========================================================================
-           4. AUTHENTICATION & NAVIGATION MANAGER
+           4. AUTHENTICATION & NAVIGATION MANAGER (LOGIN & QR SCANNER)
            ========================================================================== */
+        let html5QrcodeScanner = null;
+
+        function openQRScanner() {
+            document.getElementById('qr-scanner-modal').classList.remove('hidden');
+            
+            // Konfigurasi enjin kamera pelayar web
+            if (!html5QrcodeScanner) {
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "qr-reader", 
+                    { fps: 10, qrbox: {width: 250, height: 250}, aspectRatio: 1.0 }
+                );
+            }
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Sebaik sahaja kod QR berjaya dibaca, tutup kamera segera
+            closeQRScanner();
+            
+            // Tampal maklumat yang dibaca dari QR terus ke dalam input IC
+            const icInput = document.getElementById('student-ic-input');
+            if (icInput) {
+                icInput.value = decodedText.trim();
+                showToast("Kod QR dikesan! Log masuk secara automatik...", "success");
+                
+                // Terus picu fungsi log masuk secara automatik selepas setengah saat
+                setTimeout(() => {
+                    handleStudentLogin();
+                }, 600);
+            }
+        }
+
+        function onScanFailure(error) {
+            // Ralat biasa (tiada QR dikesan di depan kamera) - diabaikan secara senyap
+        }
+
+        function closeQRScanner() {
+            document.getElementById('qr-scanner-modal').classList.add('hidden');
+            if (html5QrcodeScanner) {
+                // Hentikan penggunaan kamera web supaya lampu kamera peranti terpadam
+                html5QrcodeScanner.clear().catch(error => {
+                    console.error("Gagal menutup kawalan kamera", error);
+                });
+            }
+        }
+
         function toggleLoginRole(role) {
             const studentBox = document.getElementById('student-login-box');
             const teacherBox = document.getElementById('teacher-login-box');
