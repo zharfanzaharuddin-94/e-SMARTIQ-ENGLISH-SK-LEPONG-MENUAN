@@ -781,8 +781,25 @@
 
                                             <!-- Perkataan Jawi disuntik di sini -->
                                         </div>
-                                        <div class="flex justify-end pt-4">
-                                             <button onclick="saveTeacherManualScore()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all shadow-md flex items-center gap-2">
+                                        <div class="flex flex-col sm:flex-row justify-between items-center pt-4 gap-4 border-t border-indigo-200 mt-4">
+                                            <!-- KOD BARU: Kawalan Audio Guru -->
+                                            <div class="flex items-center gap-2 w-full sm:w-auto bg-white p-2 rounded-xl border border-indigo-100 shadow-sm">
+                                                <button id="btn-record-teacher" onclick="toggleTeacherAudioRecording()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2">
+                                                    <i id="icon-record-teacher" class="fa-solid fa-microphone"></i> <span id="text-record-teacher">Rakam Teguran</span>
+                                                </button>
+                                                <!-- KOD BARU: Kanvas Gelombang Suara Guru -->
+                                                <div id="teacher-soundwave-container" class="hidden h-8 w-24 relative bg-indigo-50 border border-indigo-200 rounded-lg overflow-hidden flex items-center justify-center">
+                                                    <canvas id="teacher-soundwave-canvas" class="w-full h-full"></canvas>
+                                                </div>
+                                                <div id="teacher-audio-preview-container" class="hidden flex items-center gap-2">
+                                                    <audio id="teacher-audio-preview" controls class="h-8 w-32"></audio>
+                                                    <button onclick="deleteTeacherAudio()" class="text-rose-500 hover:text-rose-700 p-1.5 transition-colors" title="Padam Rakaman">
+                                                        <i class="fa-solid fa-trash-can"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                             <button onclick="saveTeacherManualScore()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2">
                                                  <i class="fa-solid fa-floppy-disk"></i> Simpan Kemaskini Markah
                                              </button>
                                         </div>
@@ -1204,7 +1221,7 @@
       // Konfigurasi API - Sila letakkan URL GAS anda secara tetap di sini!
 let systemSettings = {
     apiKey: "AIzaSyADqO_bgmfx3Kb9WGW9bsh0eWUjeMUPk8k",
-    gasUrl: "https://script.google.com/macros/s/AKfycbx4rf1X3sQKJg1E8tRhMU56osg_5gRDJT3mM_r8KkrXyVjaweeqjmYirSJNb6JL0EIvMQ/exec"
+    gasUrl: "https://script.google.com/macros/s/AKfycby9ibw0cm_HQufcWIuACRoQ34S8CHLrymHWqPUwuNGx0mWLFy4nmavnFCVUB_5gdxh8Ig/exec"
 };
 
         // Pemboleh ubah keadaan (State Variables)
@@ -1217,10 +1234,13 @@ let systemSettings = {
         let isTeacherMarkingMode = false;
         let activeRemoteReviewLogObj = null;
 
-        // Isytihar formal pemboleh ubah yang dahulunya bersifat 'implicit global'
+       // Isytihar formal pemboleh ubah yang dahulunya bersifat 'implicit global'
         let editingLogId = null;
         let tCurrentRumi = [];
         let tWordStates = [];
+        let tTeacherAudioBase64 = ""; // KOD BARU: Memori audio guru
+        let tTeacherMediaRecorder = null; // KOD BARU
+        let tTeacherAudioChunks = []; // KOD BARU
 
         // Sistem Pengecaman Suara Integrasi Asli (SpeechRecognition)
         let recognition = null;
@@ -3344,6 +3364,26 @@ function saveTopic() {
                 });
             }
 
+            // KOD BARU: Reset Tetingkap Audio Guru & Muat Audio Sedia Ada
+            tTeacherAudioBase64 = log.audioGuru || "";
+            const previewContainer = document.getElementById('teacher-audio-preview-container');
+            const btnRecord = document.getElementById('btn-record-teacher');
+            const audioPreview = document.getElementById('teacher-audio-preview');
+
+            if (tTeacherAudioBase64) {
+                audioPreview.src = tTeacherAudioBase64;
+                previewContainer.classList.remove('hidden');
+                btnRecord.classList.add('hidden');
+            } else {
+                audioPreview.src = "";
+                previewContainer.classList.add('hidden');
+                btnRecord.classList.remove('hidden');
+                document.getElementById('text-record-teacher').innerText = "Rakam Teguran";
+                document.getElementById('icon-record-teacher').className = "fa-solid fa-microphone";
+                btnRecord.classList.remove('bg-rose-100', 'text-rose-700', 'animate-pulse');
+                btnRecord.classList.add('bg-indigo-100', 'text-indigo-700');
+            }
+
             engWords.forEach((word, idx) => {
 
                 const btn = document.createElement('button');
@@ -3420,6 +3460,7 @@ function saveTeacherManualScore() {
             logs[index].isReviewed = true; 
             logs[index].statusSemakan = "DISEMAK"; 
             logs[index].jeda = newScore >= 80 ? 1.0 : 2.0;
+            logs[index].audioGuru = tTeacherAudioBase64; // KOD BARU: Simpan Base64 suara guru ke log
 
 
             AppStorage.setItem('e_smart_eng_logs', JSON.stringify(logs));
@@ -3434,6 +3475,179 @@ function saveTeacherManualScore() {
         function closeManualGradeTeacher() {
             document.getElementById('teacher-grading-workspace').classList.add('hidden');
             editingLogId = null;
+        }
+
+        // ==========================================
+        // KOD BARU: ENJIN RAKAMAN & PADAM SUARA GURU
+        // ==========================================
+        function toggleTeacherAudioRecording() {
+            const btn = document.getElementById('btn-record-teacher');
+            const icon = document.getElementById('icon-record-teacher');
+            const text = document.getElementById('text-record-teacher');
+
+            if (!tTeacherMediaRecorder || tTeacherMediaRecorder.state === "inactive") {
+                navigator.mediaDevices.getUserMedia({ audio: true })
+                    .then(stream => {
+                        // KOD BARU: Mampatan kualiti audio (12kbps) supaya saiz Base64 muat dalam Sheet
+                        let options = {};
+                        try {
+                            if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                                options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 12000 };
+                            }
+                        } catch (e) {}
+
+                        tTeacherMediaRecorder = new MediaRecorder(stream, options);
+                        tTeacherAudioChunks = [];
+                        
+                        tTeacherMediaRecorder.ondataavailable = e => {
+                            if (e.data && e.data.size > 0) tTeacherAudioChunks.push(e.data);
+                        };
+
+                        tTeacherMediaRecorder.onstop = () => {
+                            const audioType = tTeacherMediaRecorder.mimeType || 'audio/webm';
+                            const audioBlob = new Blob(tTeacherAudioChunks, { type: audioType });
+                            
+                            const reader = new FileReader();
+                            reader.onloadend = function() {
+                                let base64Result = reader.result;
+                                
+                                // KOD BARU & MUKTAMAD: PERISAI KESELAMATAN GOOGLE SHEET (MAX 49,000 AKSARA)
+                                if (base64Result.length > 49000) {
+                                    console.warn("Rakaman panjang: Audio dipotong untuk dimuatkan ke dalam Google Sheet");
+                                    base64Result = base64Result.substring(0, 49000);
+                                }
+                                
+                                tTeacherAudioBase64 = base64Result;
+                                document.getElementById('teacher-audio-preview').src = tTeacherAudioBase64;
+                                document.getElementById('teacher-audio-preview-container').classList.remove('hidden');
+                                btn.classList.add('hidden');
+                                showToast("Suara teguran berjaya direkod!", "success");
+                            };
+                            reader.readAsDataURL(audioBlob);
+
+                            if (stream) stream.getTracks().forEach(track => track.stop());
+                            
+                            stopTeacherSoundwaveAnimation();
+                            document.getElementById('teacher-soundwave-container').classList.add('hidden');
+                        };
+
+                        tTeacherMediaRecorder.start(250);
+                        
+                        // KOD BARU: Auto-berhenti selepas 8 saat supaya data tak gemuk dan lepas masuk Sheet!
+                        setTimeout(() => {
+                            if (tTeacherMediaRecorder && tTeacherMediaRecorder.state === "recording") {
+                                tTeacherMediaRecorder.stop();
+                                showToast("Masa tamat! Rakaman dihentikan (Had 8 saat).", "warning");
+                            }
+                        }, 8000);
+
+                        btn.classList.remove('bg-indigo-100', 'text-indigo-700');
+                        btn.classList.add('bg-rose-100', 'text-rose-700', 'animate-pulse');
+                        icon.className = "fa-solid fa-stop";
+                        text.innerText = "Berhenti Rakam";
+                        
+                        document.getElementById('teacher-soundwave-container').classList.remove('hidden');
+                        startTeacherSoundwaveAnimation(stream);
+                    })
+                    .catch(err => {
+                        showToast("Sila benarkan akses mikrofon untuk merakam!", "error");
+                    });
+            } else {
+                tTeacherMediaRecorder.stop();
+                stopTeacherSoundwaveAnimation();
+                document.getElementById('teacher-soundwave-container').classList.add('hidden');
+            }
+        }
+
+        function deleteTeacherAudio() {
+            tTeacherAudioBase64 = "";
+            document.getElementById('teacher-audio-preview').src = "";
+            document.getElementById('teacher-audio-preview-container').classList.add('hidden');
+            
+            const btn = document.getElementById('btn-record-teacher');
+            btn.classList.remove('hidden', 'bg-rose-100', 'text-rose-700', 'animate-pulse');
+            btn.classList.add('bg-indigo-100', 'text-indigo-700');
+            document.getElementById('text-record-teacher').innerText = "Rakam Teguran";
+            document.getElementById('icon-record-teacher').className = "fa-solid fa-microphone";
+            showToast("Rakaman dipadam. Sila rakam semula.", "warning");
+        }
+
+        // ==========================================
+        // KOD BARU: ANIMASI GELOMBANG SUARA GURU
+        // ==========================================
+        let teacherAudioCtx = null;
+        let teacherAnimFrameId = null;
+
+        function startTeacherSoundwaveAnimation(stream) {
+            const canvas = document.getElementById('teacher-soundwave-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            if (teacherAudioCtx && teacherAudioCtx.state !== 'closed') {
+                teacherAudioCtx.close();
+            }
+            teacherAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const source = teacherAudioCtx.createMediaStreamSource(stream);
+            const analyser = teacherAudioCtx.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function draw() {
+                teacherAnimFrameId = requestAnimationFrame(draw);
+                analyser.getByteTimeDomainData(dataArray);
+
+                ctx.fillStyle = '#eef2ff'; // Warna latar bg-indigo-50
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#6366f1'; // Warna garisan text-indigo-500
+                ctx.beginPath();
+
+                const sliceWidth = canvas.width * 1.0 / bufferLength;
+                let x = 0;
+
+                for (let i = 0; i < bufferLength; i++) {
+                    const v = dataArray[i] / 128.0;
+                    const y = v * canvas.height / 2;
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    x += sliceWidth;
+                }
+
+                ctx.lineTo(canvas.width, canvas.height / 2);
+                ctx.stroke();
+            }
+            draw();
+        }
+
+        function stopTeacherSoundwaveAnimation() {
+            if (teacherAnimFrameId) {
+                cancelAnimationFrame(teacherAnimFrameId);
+                teacherAnimFrameId = null;
+            }
+            if (teacherAudioCtx) {
+                teacherAudioCtx.close().then(() => {
+                    teacherAudioCtx = null;
+                });
+            }
+            const canvas = document.getElementById('teacher-soundwave-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.strokeStyle = '#c7d2fe';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height / 2);
+                ctx.lineTo(canvas.width, canvas.height / 2);
+                ctx.stroke();
+            }
         }
 
         let teacherModTimer;
@@ -3650,33 +3864,37 @@ function saveLiveManualGrading() {
 
             document.getElementById('exercise-suggestions-text').innerHTML = suggestionsHTML;
 
-           const newLog = {
-                id: "LOG_" + Date.now().toString(), 
-                studentIc: currentActiveUser.ic,
-                topicId: topicId,
+       // KOD BARU: Kekalkan ID lama untuk proses UPDATE supaya ia tidak wujudkan rekod bertindih
+            const newLog = {
+                id: editingLogId, 
+                studentIc: logs[index].studentIc,
+                topicId: logs[index].topicId,
                 score: finalScore,
                 manualScore: finalScore,
                 jeda: assumedJeda,
                 stuckCount: tags.filter(t => t.includes('Sangkut')).length,
                 tertinggal: tags.filter(t => t.includes('Tinggal')).length,
-                date: new Date().toISOString().split('T')[0],
-                audioUrl: "", 
-                 weaknessTags: tags,
-                 wordStates: currentWordStates, // KOD PENYELAMAT 1B: Masukkan karung ke dalam memori
+                date: logs[index].date,
+                audioUrl: logs[index].audioUrl, // Jaga audio asal murid supaya tak terpadam
+                audioGuru: tTeacherAudioBase64, // Tarik Base64 Audio Guru
+                weaknessTags: tags,
+                wordStates: currentWordStates,
                 isReviewed: true,
                 statusSemakan: "DISEMAK" 
             };
 
-            const logs = JSON.parse(AppStorage.getItem('e_smart_eng_logs')) || [];
-            logs.push(newLog);
+            // Tindih log lama dengan log baharu yang dah disemak di dalam IndexedDB
+            logs[index] = newLog;
             AppStorage.setItem('e_smart_eng_logs', JSON.stringify(logs));
 
-            syncToGoogleSheets('SKOR LATIHAN', newLog, 'INSERT');
-            toggleTeacherMarkingMode(); 
-            populateMonthFilters();
+            // Arahkan awan Google buat proses kemas kini (UPDATE) ke atas ID yang sama
+            syncToGoogleSheets('SKOR LATIHAN', newLog, 'UPDATE');
+            
             showToast("Markah penilaian manual guru disimpan secara live!", "success");
+            
+            closeManualGradeTeacher();
+            selectStudentForReportCard(newLog.studentIc); 
         }
-
 
         /* ==========================================================================
            10. PRACTICE ZONE & STUDENTS READ BOARD
@@ -4369,7 +4587,9 @@ function renderPersonalStudentReport(customLogIds = null) {
                     const latestBadge = (idx === 0) ? `<span class="ml-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-amber-900 text-[9px] px-2 py-0.5 rounded-full font-black shadow-sm border border-amber-300"><i class="fa-solid fa-sparkles mr-1"></i>TERKINI</span>` : '';
                     const reviewBadge = l.isReviewed ? `<span class="ml-1.5 bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-circle-check"></i> Disemak</span>` : `<span class="ml-1.5 bg-amber-50 text-amber-700 text-[9px] px-1.5 py-0.5 rounded font-bold border border-amber-200"><i class="fa-solid fa-clock"></i> Belum Disemak</span>`;
                     const displayScore = l.isReviewed ? `${activeScore}%` : 'N/A';
-                    const audioPlayerHTML = l.audioUrl ? `<audio src="${l.audioUrl}" controls class="h-6 w-32 rounded-lg bg-slate-100 shadow-sm"></audio>` : `<span class="text-[10px] text-slate-400 italic">Tiada audio</span>`;
+                    const audioPlayerHTML = l.audioUrl ? `<audio src="${l.audioUrl}" controls class="h-6 w-32 rounded-lg bg-slate-100 shadow-sm"></audio>` : `<span class="text-[10px] text-slate-400 italic">Tiada audio murid</span>`;
+                    // KOD BARU: Pemain Audio Guru (Ikon Headset)
+                    const audioGuruHTML = l.audioGuru && l.audioGuru.trim() !== "" ? `<div class="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-xl ml-2 shadow-sm" title="Maklum Balas Suara Guru"><i class="fa-solid fa-headset text-indigo-600 text-xs"></i><audio src="${l.audioGuru}" controls class="h-7 w-32"></audio></div>` : ``;
 
                     let cleanDate = l.date ? String(l.date).replace(/^'/, '') : "";
                     if (cleanDate && cleanDate.includes('GMT')) {
@@ -4399,6 +4619,7 @@ function renderPersonalStudentReport(customLogIds = null) {
                             </div>
                             <div class="flex gap-2 items-center shrink-0">
                                 ${audioPlayerHTML}
+                                ${audioGuruHTML} <!-- KOD BARU DI SINI -->
                                 <span class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-extrabold border border-slate-200 w-12 text-center">${displayScore}</span>
                             </div>
                         </div>
@@ -5554,7 +5775,9 @@ function renderOverallAnalysis() {
                     const latestBadge = (idx === 0) ? `<span class="ml-1.5 bg-gradient-to-r from-amber-200 to-yellow-400 text-amber-900 text-[9px] px-2 py-0.5 rounded-full font-black shadow-sm border border-amber-300"><i class="fa-solid fa-sparkles mr-1"></i>TERKINI</span>` : '';
                     const reviewBadge = l.isReviewed ? `<span class="ml-1.5 bg-emerald-50 text-emerald-700 text-[9px] px-1.5 py-0.5 rounded font-bold"><i class="fa-solid fa-circle-check"></i> Disemak</span>` : `<span class="ml-1.5 bg-amber-50 text-amber-700 text-[9px] px-1.5 py-0.5 rounded font-bold border border-amber-200"><i class="fa-solid fa-clock"></i> Belum Disemak</span>`;
                     const displayScore = l.isReviewed ? `${activeScore}%` : 'N/A';
-                    const audioPlayerHTML = l.audioUrl ? `<audio src="${l.audioUrl}" controls class="h-6 w-32 rounded-lg bg-slate-100 shadow-sm"></audio>` : `<span class="text-[10px] text-slate-400 italic">Tiada audio</span>`;
+                    const audioPlayerHTML = l.audioUrl ? `<audio src="${l.audioUrl}" controls class="h-6 w-32 rounded-lg bg-slate-100 shadow-sm"></audio>` : `<span class="text-[10px] text-slate-400 italic">Tiada audio murid</span>`;
+                    // KOD BARU: Pemain Audio Guru (Ikon Headset)
+                    const audioGuruHTML = l.audioGuru && l.audioGuru.trim() !== "" ? `<div class="flex items-center gap-1.5 bg-indigo-50 border border-indigo-200 px-2 py-1 rounded-xl ml-2 shadow-sm" title="Maklum Balas Suara Guru"><i class="fa-solid fa-headset text-indigo-600 text-xs"></i><audio src="${l.audioGuru}" controls class="h-7 w-32"></audio></div>` : ``;
 
                     let cleanDate = l.date ? String(l.date).replace(/^'/, '') : "";
                     if (cleanDate && cleanDate.includes('GMT')) {
@@ -5587,6 +5810,7 @@ function renderOverallAnalysis() {
                             </div>
                             <div class="flex gap-2 items-center shrink-0">
                                 ${audioPlayerHTML}
+                                ${audioGuruHTML}
                                 <span class="bg-slate-100 text-slate-800 px-2 py-0.5 rounded font-extrabold border border-slate-200 w-12 text-center">${displayScore}</span>
                                 ${btnSemakHTML}
                             </div>
