@@ -294,28 +294,55 @@
 
             <!-- Borang Murid -->
             <div id="student-login-box" class="space-y-6">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">No. Kad Pengenalan Murid</label>
-                    <div class="relative">
-                        <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
-                            <i class="fa-solid fa-id-card"></i>
-                        </span>
-                        <input type="text" id="student-ic-input" placeholder="Contoh: 151212085544" class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all">
-                    </div>
-                    <p class="text-[10px] text-slate-400 mt-1.5 ml-1">Gunakan No. IC murid yang telah didaftarkan guru (cth: 151212085544)</p>
+                <!-- Navigasi Tab (Diubah Suai) -->
+                <div class="flex bg-slate-100 p-1 rounded-2xl mb-4">
+                    <button onclick="switchLoginTab('ic')" id="tab-btn-ic" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl bg-white shadow text-slate-800 transition-all">
+                        <i class="fa-solid fa-keyboard mr-1"></i> IC
+                    </button>
+                    <button onclick="switchLoginTab('qr')" id="tab-btn-qr" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-800 transition-all">
+                        <i class="fa-solid fa-qrcode mr-1"></i> QR
+                    </button>
+                    <button onclick="switchLoginTab('face')" id="tab-btn-face" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl text-slate-500 hover:text-slate-800 transition-all">
+                        <i class="fa-solid fa-face-smile mr-1"></i> Wajah
+                    </button>
                 </div>
 
-                <div class="flex gap-2 sm:gap-3">
-                    <button onclick="handleStudentLogin()" class="flex-grow bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold py-3.5 px-4 sm:px-6 rounded-2xl shadow-lg hover:shadow-emerald-200 transition-all flex items-center justify-center gap-2 text-sm sm:text-base">
+                <!-- Kandungan Tab 1: IC -->
+                <div id="login-tab-ic" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">No. Kad Pengenalan Murid</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400">
+                                <i class="fa-solid fa-id-card"></i>
+                            </span>
+                            <input type="text" id="student-ic-input" placeholder="Contoh: 151212085544" class="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all">
+                        </div>
+                        <p class="text-[10px] text-slate-400 mt-1.5 ml-1">Guna No. IC pendaftaran (cth: 151212085544)</p>
+                    </div>
+                    <button onclick="handleStudentLogin()" class="w-full bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg hover:shadow-emerald-200 transition-all flex items-center justify-center gap-2">
                         <i class="fa-solid fa-door-open"></i> Log Masuk
                     </button>
-                    <!-- Butang QR Baharu -->
-                    <button onclick="openQRScanner()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3.5 px-4 sm:px-5 rounded-2xl shadow-sm border border-emerald-200 transition-all flex items-center justify-center gap-2" title="Imbas Kod QR Kamera">
-                        <i class="fa-solid fa-qrcode text-xl"></i>
+                </div>
+
+                <!-- Kandungan Tab 2: QR -->
+                <div id="login-tab-qr" class="hidden text-center space-y-4 py-2">
+                    <div class="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-2xl flex items-center justify-center mx-auto text-3xl mb-2">
+                        <i class="fa-solid fa-qrcode"></i>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-600">Imbas Kod QR Kad Murid anda</p>
+                    <button onclick="openQRScanner()" class="w-full bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-bold py-3.5 px-6 rounded-2xl shadow-sm transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-camera"></i> Buka Kamera QR
                     </button>
-                    <!-- KOD BARU: Butang Log Masuk Wajah -->
-                    <button type="button" onclick="bukaKameraLogMasukWajah()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-3.5 px-4 sm:px-5 rounded-2xl shadow-sm border border-indigo-200 transition-all flex items-center justify-center gap-2" title="Imbas Wajah AI">
-                        <i class="fa-solid fa-face-viewfinder text-xl"></i>
+                </div>
+
+                <!-- Kandungan Tab 3: Face ID -->
+                <div id="login-tab-face" class="hidden text-center space-y-4 py-2">
+                    <div class="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mx-auto text-4xl mb-2">
+                        <i class="fa-solid fa-face-viewfinder"></i>
+                    </div>
+                    <p class="text-sm font-semibold text-slate-600">Gunakan Pengecaman Wajah Pintar (AI)</p>
+                    <button type="button" onclick="bukaKameraLogMasukWajah()" class="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg hover:shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-camera"></i> Imbas Muka Sekarang
                     </button>
                 </div>
 
@@ -2017,6 +2044,23 @@ async function muatTurunSkorDariSheet() {
                     console.error("Gagal menutup kawalan kamera", error);
                 });
             }
+        }
+
+        // KOD BARU: Fungsi pertukaran tab untuk Borang Log Masuk Murid
+        function switchLoginTab(tab) {
+            // Sembunyikan semua panel
+            ['ic', 'qr', 'face'].forEach(id => {
+                document.getElementById(`login-tab-${id}`).classList.add('hidden');
+                const btn = document.getElementById(`tab-btn-${id}`);
+                btn.classList.remove('bg-white', 'shadow', 'text-slate-800');
+                btn.classList.add('text-slate-500');
+            });
+
+            // Paparkan panel yang dipilih
+            document.getElementById(`login-tab-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-btn-${tab}`);
+            activeBtn.classList.remove('text-slate-500');
+            activeBtn.classList.add('bg-white', 'shadow', 'text-slate-800');
         }
 
         function toggleLoginRole(role) {
@@ -3877,11 +3921,11 @@ function saveTeacherManualScore() {
             if (!tTeacherMediaRecorder || tTeacherMediaRecorder.state === "inactive") {
                 navigator.mediaDevices.getUserMedia({ audio: true })
                     .then(stream => {
-                        // KOD BARU: Mampatan kualiti audio (12kbps) supaya saiz Base64 muat dalam Sheet
+                        // KOD BARU: Mampatan kualiti audio guru dinaik taraf ke HD (128kbps) kerana menggunakan Google Drive
                         let options = {};
                         try {
                             if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                                options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 12000 };
+                                options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 128000 };
                             }
                         } catch (e) {}
 
@@ -4523,11 +4567,11 @@ function displayActiveLatihan() {
             if (!mediaRecorder || mediaRecorder.state === "inactive") {
                 navigator.mediaDevices.getUserMedia({ audio: true })
                     .then(stream => {
-                        // KOD BARU: Pasang Enjin Pemampat (12kbps) pada suara murid supaya muat Google Sheet
+                        // KOD BARU: Pasang Enjin Pemampat pada suara murid (Ditingkatkan ke Kualiti Sederhana Tinggi 64kbps untuk Drive)
                         let options = {};
                         try {
                             if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                                options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 12000 };
+                                options = { mimeType: 'audio/webm;codecs=opus', audioBitsPerSecond: 64000 };
                             }
                         } catch (e) {}
 
