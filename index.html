@@ -193,12 +193,36 @@
         </div>
     </div>
 
+    <!-- KOD BARU: MODAL KAMERA LOG MASUK WAJAH MURID -->
+    <div id="face-login-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm hidden" style="direction: ltr;">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 transform scale-95 transition-all duration-300 relative">
+            <button type="button" onclick="tutupKameraLogMasukWajah()" class="absolute top-4 right-4 text-slate-400 hover:text-rose-500 transition-colors z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm border border-slate-100">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="text-center mb-4 mt-2">
+                <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-xl text-indigo-600 mx-auto mb-2 relative overflow-hidden">
+                    <i class="fa-solid fa-face-viewfinder z-10 relative"></i>
+                    <div class="absolute inset-0 bg-indigo-200 opacity-50 animate-ping z-0"></div>
+                </div>
+                <h3 class="font-bold text-slate-800 text-lg">Log Masuk Wajah</h3>
+                <p class="text-xs text-slate-500 mt-1">Sila pandang kamera. Sistem sedang mengecam identiti anda...</p>
+            </div>
+            
+            <div class="relative w-full rounded-2xl overflow-hidden border-2 border-indigo-100 bg-slate-800 aspect-square flex items-center justify-center">
+                <video id="login-video" autoplay muted playsinline class="absolute inset-0 w-full h-full object-cover"></video>
+                <canvas id="login-canvas" class="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"></canvas>
+                <div id="login-loading" class="absolute inset-0 flex items-center justify-center text-white font-bold text-sm bg-slate-800/80 z-20">Memanaskan AI...</div>
+            </div>
+            <p id="login-face-status" class="text-[10px] text-center mt-3 font-bold text-indigo-600 animate-pulse">Sedang mencari padanan wajah...</p>
+        </div>
+    </div>
+
     <script>
         // =========================================================================
         // SISTEM PEMBERSIH CACHE TEGAR (KALIS CRASH GEMINI WORKSPACE SEPENUHNYA)
         // =========================================================================
         (function() {
-            const APP_VERSION = "2.7"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
+            const APP_VERSION = "2.8"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
             const currentVersion = localStorage.getItem('esmartiq_version');
             
             if (currentVersion !== APP_VERSION) {
@@ -281,13 +305,17 @@
                     <p class="text-[10px] text-slate-400 mt-1.5 ml-1">Gunakan No. IC murid yang telah didaftarkan guru (cth: 151212085544)</p>
                 </div>
 
-                <div class="flex gap-3">
-                    <button onclick="handleStudentLogin()" class="flex-grow bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold py-3.5 px-6 rounded-2xl shadow-lg hover:shadow-emerald-200 transition-all flex items-center justify-center gap-2">
+                <div class="flex gap-2 sm:gap-3">
+                    <button onclick="handleStudentLogin()" class="flex-grow bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-700 hover:to-teal-800 text-white font-bold py-3.5 px-4 sm:px-6 rounded-2xl shadow-lg hover:shadow-emerald-200 transition-all flex items-center justify-center gap-2 text-sm sm:text-base">
                         <i class="fa-solid fa-door-open"></i> Log Masuk
                     </button>
                     <!-- Butang QR Baharu -->
-                    <button onclick="openQRScanner()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3.5 px-5 rounded-2xl shadow-sm border border-emerald-200 transition-all flex items-center justify-center gap-2" title="Imbas Kod QR Kamera">
+                    <button onclick="openQRScanner()" class="bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold py-3.5 px-4 sm:px-5 rounded-2xl shadow-sm border border-emerald-200 transition-all flex items-center justify-center gap-2" title="Imbas Kod QR Kamera">
                         <i class="fa-solid fa-qrcode text-xl"></i>
+                    </button>
+                    <!-- KOD BARU: Butang Log Masuk Wajah -->
+                    <button type="button" onclick="bukaKameraLogMasukWajah()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-3.5 px-4 sm:px-5 rounded-2xl shadow-sm border border-indigo-200 transition-all flex items-center justify-center gap-2" title="Imbas Wajah AI">
+                        <i class="fa-solid fa-face-viewfinder text-xl"></i>
                     </button>
                 </div>
 
@@ -1527,6 +1555,115 @@ function tutupKameraDaftarWajah() {
         videoStreamEnroll.getTracks().forEach(track => track.stop());
     }
     const canvas = document.getElementById('enroll-canvas');
+    if(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+// =========================================================================
+// KOD BARU: SISTEM LOG MASUK WAJAH (FACIAL LOGIN ENGINE)
+// =========================================================================
+let videoStreamLogin = null;
+let loginInterval = null;
+
+async function bukaKameraLogMasukWajah() {
+    const students = JSON.parse(AppStorage.getItem('e_smart_eng_students')) || [];
+    
+    // Semak adakah pangkalan data mempunyai data biometrik yang sah
+    const hasBiometricData = students.some(s => s.biometrik_wajah && s.biometrik_wajah.length > 50);
+    if (!hasBiometricData) {
+        showToast("Tiada data wajah direkodkan dalam sistem. Sila hubungi guru untuk pendaftaran wajah.", "error");
+        return;
+    }
+
+    const modal = document.getElementById('face-login-modal');
+    const video = document.getElementById('login-video');
+    const canvas = document.getElementById('login-canvas');
+    const loading = document.getElementById('login-loading');
+    const statusText = document.getElementById('login-face-status');
+    
+    modal.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    statusText.innerText = "Sedang mencari padanan wajah...";
+    statusText.className = "text-[10px] text-center mt-3 font-bold text-indigo-600 animate-pulse";
+
+    try {
+        videoStreamLogin = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        video.srcObject = videoStreamLogin;
+        
+        video.onloadedmetadata = () => {
+            const displaySize = { width: video.clientWidth, height: video.clientHeight };
+            faceapi.matchDimensions(canvas, displaySize);
+            loading.classList.add('hidden');
+
+            // Bina "LabeledFaceDescriptors" dari memori lokal (Tukar JSON kepada format Matematik AI)
+            const labeledDescriptors = [];
+            students.forEach(s => {
+                if (s.biometrik_wajah && s.biometrik_wajah.length > 50) {
+                    try {
+                        const float32Array = new Float32Array(JSON.parse(s.biometrik_wajah));
+                        labeledDescriptors.push(new faceapi.LabeledFaceDescriptors(s.ic, [float32Array]));
+                    } catch (e) {
+                        console.warn("Ralat memproses biometrik untuk IC: " + s.ic);
+                    }
+                }
+            });
+
+            if (labeledDescriptors.length === 0) {
+                showToast("Ralat struktur biometrik. Sila daftar semula wajah.", "error");
+                tutupKameraLogMasukWajah();
+                return;
+            }
+
+            // Tetapkan tahap ketegasan AI (0.55 adalah jarak Euclidean standard, lebih rendah = lebih ketat)
+            const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
+
+            loginInterval = setInterval(async () => {
+                const detections = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                if (detections) {
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    faceapi.draw.drawDetections(canvas, resizedDetections);
+                    
+                    const match = faceMatcher.findBestMatch(detections.descriptor);
+                    
+                    // Jika jarak ralat (distance) kurang dari 0.55, bermakna wajah DITERIMA!
+                    if (match.label !== 'unknown' && match.distance < 0.55) {
+                        clearInterval(loginInterval); // Hentikan carian kamera
+                        statusText.innerText = "✅ Identiti disahkan! Log masuk...";
+                        statusText.className = "text-[10px] text-center mt-3 font-bold text-emerald-600";
+                        
+                        // Tutup kotak kamera selepas 1 saat & terus Log Masuk!
+                        setTimeout(() => {
+                            tutupKameraLogMasukWajah();
+                            
+                            const icInput = document.getElementById('student-ic-input');
+                            if (icInput) {
+                                icInput.value = match.label;
+                                showToast("Wajah disahkan. Log masuk berjaya!", "success");
+                                handleStudentLogin(); // Picu log masuk secara automatik
+                            }
+                        }, 1000);
+                    }
+                }
+            }, 300); // Imbas muka murid setiap 300 milisaat
+        };
+    } catch (err) {
+        showToast("Gagal mengakses kamera. Sila benarkan akses.", "error");
+        tutupKameraLogMasukWajah();
+    }
+}
+
+function tutupKameraLogMasukWajah() {
+    document.getElementById('face-login-modal').classList.add('hidden');
+    if (loginInterval) clearInterval(loginInterval);
+    if (videoStreamLogin) {
+        videoStreamLogin.getTracks().forEach(track => track.stop());
+    }
+    const canvas = document.getElementById('login-canvas');
     if(canvas) {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
