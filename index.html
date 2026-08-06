@@ -25,6 +25,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <!-- Enjin HTML5-QRCode untuk Kamera Log Masuk Murid -->
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- KOD BARU: Enjin Pengecaman Wajah (Face-API) -->
+    <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     
     <script>
         tailwind.config = {
@@ -165,12 +167,38 @@
         </div>
     </div>
 
+    <!-- KOD BARU: MODAL KAMERA PENDAFTARAN WAJAH GURU -->
+    <div id="face-enroll-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm hidden" style="direction: ltr;">
+        <div class="bg-white rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-slate-100 transform scale-95 transition-all duration-300 relative">
+            <button type="button" onclick="tutupKameraDaftarWajah()" class="absolute top-4 right-4 text-slate-400 hover:text-rose-500 transition-colors z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-sm border border-slate-100">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="text-center mb-4 mt-2">
+                <div class="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-xl text-indigo-600 mx-auto mb-2">
+                    <i class="fa-solid fa-face-viewfinder"></i>
+                </div>
+                <h3 class="font-bold text-slate-800 text-lg">Imbas Wajah Murid</h3>
+                <p class="text-xs text-slate-500 mt-1">Pastikan wajah murid berada di dalam kotak dengan cahaya yang terang.</p>
+            </div>
+            
+            <div class="relative w-full rounded-2xl overflow-hidden border-2 border-indigo-100 bg-slate-800 aspect-square flex items-center justify-center">
+                <video id="enroll-video" autoplay muted playsinline class="absolute inset-0 w-full h-full object-cover"></video>
+                <canvas id="enroll-canvas" class="absolute inset-0 w-full h-full object-cover z-10 pointer-events-none"></canvas>
+                <div id="enroll-loading" class="absolute inset-0 flex items-center justify-center text-white font-bold text-sm bg-slate-800/80 z-20">Memanaskan AI...</div>
+            </div>
+            
+            <button type="button" id="btn-tangkap-wajah" onclick="tangkapBiometrik()" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition-all shadow-md flex items-center justify-center gap-2 hidden">
+                <i class="fa-solid fa-camera"></i> Rekod Wajah Ini
+            </button>
+        </div>
+    </div>
+
     <script>
         // =========================================================================
         // SISTEM PEMBERSIH CACHE TEGAR (KALIS CRASH GEMINI WORKSPACE SEPENUHNYA)
         // =========================================================================
         (function() {
-            const APP_VERSION = "2.6"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
+            const APP_VERSION = "2.7"; // ⚠️ TUKAR NOMBOR INI SETIAP KALI BUAT KEMAS KINI DI GITHUB
             const currentVersion = localStorage.getItem('esmartiq_version');
             
             if (currentVersion !== APP_VERSION) {
@@ -448,6 +476,16 @@
                                 </div>
 
                                 <input type="hidden" id="murid-index" value="-1">
+                                <!-- KOD BARU: Input tersembunyi & Butang rakam muka -->
+                                <input type="hidden" id="murid-biometrik" value="">
+                                
+                                <div class="mb-3">
+                                    <button type="button" onclick="bukaKameraDaftarWajah()" class="w-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold py-2 px-4 rounded-xl text-xs transition-all border border-indigo-200 flex items-center justify-center gap-2 shadow-sm">
+                                        <i class="fa-solid fa-face-viewfinder"></i> Rakam Biometrik Wajah
+                                    </button>
+                                    <p id="status-biometrik" class="text-[10px] text-center mt-1 text-slate-500 font-medium">Tiada data biometrik direkodkan.</p>
+                                </div>
+
                                 <div>
                                     <label class="block text-[11px] font-bold text-slate-600 uppercase tracking-wide mb-1">Nama Penuh Murid</label>
                                     <input type="text" id="murid-nama" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
@@ -1277,7 +1315,7 @@
       // Konfigurasi API - Sila letakkan URL GAS anda secara tetap di sini!
 let systemSettings = {
     apiKey: "AIzaSyADqO_bgmfx3Kb9WGW9bsh0eWUjeMUPk8k",
-    gasUrl: "https://script.google.com/macros/s/AKfycbyhf5FitHJxauIERrKXdHg8MqehABmauoa1Kpjr3l0Pzz44noOAi3qWEfjskn1P0qwU5w/exec"
+    gasUrl: "https://script.google.com/macros/s/AKfycbygFBzewWvuxk3of0IGSl7eBbf-so8ZwQCDE6yyanEftE0h3UroSlhLu83i1ED02XKxew/exec"
 };
 
         // Pemboleh ubah keadaan (State Variables)
@@ -1309,6 +1347,18 @@ let systemSettings = {
 window.onload = async function() {
     // 1. MENGHIDUPKAN ENJIN INDEXEDDB DAHULU!
     await AppStorage.init();
+
+    // SUNTIKAN AI: Memuatkan Model Pengecaman Wajah dari folder ./models di GitHub cikgu
+    try {
+        await Promise.all([
+            faceapi.nets.ssdMobilenetv1.loadFromUri('./models'),
+            faceapi.nets.faceLandmark68Net.loadFromUri('./models'),
+            faceapi.nets.faceRecognitionNet.loadFromUri('./models')
+        ]);
+        console.log("✅ Enjin Biometrik Wajah sedia digunakan!");
+    } catch (e) {
+        console.warn("⚠️ Gagal memuat turun fail model wajah dari folder ./models", e);
+    }
 
     // Pengesahan dan inisialisasi simpanan tempatan (IndexedDB/Cache) - Kalis Rentetan Kosong "[]"
     const localStudents = AppStorage.getItem('e_smart_eng_students');
@@ -1408,6 +1458,82 @@ window.onload = async function() {
 };
 
 // =========================================================================
+// KOD BARU: SISTEM BIOMETRIK WAJAH (PENDAFTARAN OLEH GURU)
+// =========================================================================
+let videoStreamEnroll = null;
+let enrollInterval = null;
+let currentFaceDescriptor = null;
+
+async function bukaKameraDaftarWajah() {
+    const modal = document.getElementById('face-enroll-modal');
+    const video = document.getElementById('enroll-video');
+    const canvas = document.getElementById('enroll-canvas');
+    const loading = document.getElementById('enroll-loading');
+    const btnTangkap = document.getElementById('btn-tangkap-wajah');
+    
+    modal.classList.remove('hidden');
+    loading.classList.remove('hidden');
+    btnTangkap.classList.add('hidden');
+    currentFaceDescriptor = null;
+
+    try {
+        videoStreamEnroll = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
+        video.srcObject = videoStreamEnroll;
+        
+        video.onloadedmetadata = () => {
+            const displaySize = { width: video.clientWidth, height: video.clientHeight };
+            faceapi.matchDimensions(canvas, displaySize);
+            loading.classList.add('hidden');
+
+            enrollInterval = setInterval(async () => {
+                const detections = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                if (detections) {
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    faceapi.draw.drawDetections(canvas, resizedDetections);
+                    currentFaceDescriptor = detections.descriptor;
+                    btnTangkap.classList.remove('hidden');
+                } else {
+                    btnTangkap.classList.add('hidden');
+                }
+            }, 200); 
+        };
+    } catch (err) {
+        showToast("Gagal mengakses kamera. Sila benarkan akses pelayar web.", "error");
+        tutupKameraDaftarWajah();
+    }
+}
+
+function tangkapBiometrik() {
+    if (currentFaceDescriptor) {
+        const descriptorArray = Array.from(currentFaceDescriptor);
+        document.getElementById('murid-biometrik').value = JSON.stringify(descriptorArray);
+        
+        const statusEl = document.getElementById('status-biometrik');
+        statusEl.innerText = "✅ Biometrik Wajah berjaya direkodkan.";
+        statusEl.className = "text-[10px] text-center mt-1 font-bold text-emerald-600";
+        
+        showToast("Wajah disahkan dan direkod!", "success");
+        tutupKameraDaftarWajah();
+    }
+}
+
+function tutupKameraDaftarWajah() {
+    document.getElementById('face-enroll-modal').classList.add('hidden');
+    if (enrollInterval) clearInterval(enrollInterval);
+    if (videoStreamEnroll) {
+        videoStreamEnroll.getTracks().forEach(track => track.stop());
+    }
+    const canvas = document.getElementById('enroll-canvas');
+    if(canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+// =========================================================================
 // PENTERJEMAH CSV (CSV PARSER) PINTAR
 // Fungsi ini membaca fail CSV dan mengubahnya ke dalam bentuk Data Aplikasi (JSON)
 // =========================================================================
@@ -1461,7 +1587,8 @@ async function muatTurunDataMuridDariSheet() {
                 school: row._raw[3] || "",
                 class: row._raw[4] || "",
                 supervisor: row._raw[5] || "",
-                image: row._raw[6] || ""
+                image: row._raw[6] || "",
+                biometrik_wajah: row.biometrik_wajah || row.biometrik || row._raw[7] || "" // KOD BARU: Tarik lajur BIOMETRIK_WAJAH
             })).filter(s => s.name !== ""); // Tapisan keselamatan: Buang jika tiada nama
 
             // KOD BAHARU: Buang syarat length > 0 supaya memori telefon dikosongkan apabila rekod habis dipadam
@@ -2297,10 +2424,12 @@ function populateClassFilters() {
         return;
     }
 
+       const biometrik = document.getElementById('murid-biometrik').value;
        const newStudent = {
-        id: "MRD_" + Date.now().toString(), // PENYELESAIAN: Tambah awalan MRD_ supaya selamat
+        id: "MRD_" + Date.now().toString(), 
         name, ic, school, class: kelas, supervisor,
-        image: avatar.startsWith('data:image') ? avatar : ""
+        image: avatar.startsWith('data:image') ? avatar : "",
+        biometrik_wajah: biometrik // KOD BARU
     };
 
     // SIMPAN DATA KE INDEXEDDB SECARA TERUS (Elak Kehilangan Data)
@@ -2332,6 +2461,12 @@ function populateClassFilters() {
 
     const avatar = document.getElementById('murid-img-preview').src;
     students[idx].image = avatar.startsWith('data:image') ? avatar : students[idx].image;
+    
+    // KOD BARU: Menyimpan kemaskini biometrik jika ada
+    const biometrik = document.getElementById('murid-biometrik').value;
+    if (biometrik) {
+        students[idx].biometrik_wajah = biometrik;
+    }
 
     // SIMPAN KEMAS KINI KE INDEXEDDB SECARA TERUS
     AppStorage.setItem('e_smart_eng_students', JSON.stringify(students));
