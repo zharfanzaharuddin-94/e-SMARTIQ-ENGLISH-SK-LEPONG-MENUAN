@@ -1645,10 +1645,14 @@ async function bukaKameraLogMasukWajah() {
                 return;
             }
 
-            // Tetapkan tahap ketegasan AI (0.55 adalah jarak Euclidean standard, lebih rendah = lebih ketat)
+           // Tetapkan tahap ketegasan AI (0.55 adalah jarak Euclidean standard, lebih rendah = lebih ketat)
             const faceMatcher = new faceapi.FaceMatcher(labeledDescriptors, 0.55);
 
+            let isLoginTriggered = false; // KOD BARU: Mangga pengunci (Lock)
+
             loginInterval = setInterval(async () => {
+                if (isLoginTriggered) return; // KOD BARU: Hentikan imbasan yang bertindih jika dah lulus
+
                 const detections = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
                 const ctx = canvas.getContext('2d');
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1660,7 +1664,8 @@ async function bukaKameraLogMasukWajah() {
                     const match = faceMatcher.findBestMatch(detections.descriptor);
                     
                     // Jika jarak ralat (distance) kurang dari 0.55, bermakna wajah DITERIMA!
-                    if (match.label !== 'unknown' && match.distance < 0.55) {
+                    if (match.label !== 'unknown' && match.distance < 0.55 && !isLoginTriggered) { // KOD BARU: Semak mangga sekali lagi
+                        isLoginTriggered = true; // KOD BARU: Kunci mangga supaya tak berulang
                         clearInterval(loginInterval); // Hentikan carian kamera
                         statusText.innerText = "✅ Identiti disahkan! Log masuk...";
                         statusText.className = "text-[10px] text-center mt-3 font-bold text-emerald-600";
