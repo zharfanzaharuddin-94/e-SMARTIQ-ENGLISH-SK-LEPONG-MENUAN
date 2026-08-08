@@ -563,10 +563,12 @@
                                 </div>
 
                                 <div class="pt-4 flex flex-col gap-2">
-                                    <button onclick="saveStudent()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-sm flex items-center justify-center gap-2">
+                                    <!-- KOD BARU: Tambah ID 'btn-simpan-murid' -->
+                                    <button id="btn-simpan-murid" onclick="saveStudent()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-4 rounded-xl text-sm transition-all shadow-sm flex items-center justify-center gap-2">
                                         <i class="fa-solid fa-user-plus"></i> Simpan Rekod Murid
                                     </button>
-                                    <div class="grid grid-cols-2 gap-2">
+                                    <!-- KOD BARU: Tambah ID 'kumpulan-butang-sunting' dan kelas 'hidden' supaya asalnya disembunyikan -->
+                                    <div id="kumpulan-butang-sunting" class="hidden grid grid-cols-2 gap-2">
                                         <button onclick="updateStudent()" class="bg-secondary-600 hover:bg-secondary-700 text-white font-bold py-2 px-3 rounded-xl text-xs transition-all flex items-center justify-center gap-1">
                                             <i class="fa-solid fa-pen-to-square"></i> Kemas Kini
                                         </button>
@@ -1096,7 +1098,7 @@
                                 <p class="mt-1.5 font-semibold text-[10px] text-indigo-600 border-t border-indigo-200/50 pt-1.5">Nota Pengiraan: Tepat = 1.0 mata | Sangkut (Oren) = 0.5 mata | Salah (Merah) = 0 mata</p>
                             </div>
                             <button onclick="saveLiveManualGrading()" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-6 rounded-xl text-sm transition-all shadow flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-floppy-disk"></i> Simpan Penilaian Manual
+                                <i class="fa-solid fa-floppy-disk"></i> Simpan Penilaian
                             </button>
                         </div>
 
@@ -2567,7 +2569,7 @@ function populateClassFilters() {
 
         // ----------------------------------
 
-       function selectStudentForEdit(idx) {
+     function selectStudentForEdit(idx) {
 
     const students = JSON.parse(AppStorage.getItem('e_smart_eng_students')) || [];
     const s = students[idx];
@@ -2583,6 +2585,26 @@ function populateClassFilters() {
     document.getElementById('murid-guru').value = s.supervisor || s["penyelaras jawi (guru)"] || s["penyelaras jawi (guru) "] || "";
     
     document.getElementById('murid-img-preview').src = s.image || "https://placehold.co/100x100/10b981/ffffff?text=Murid";
+    
+    // KOD BARU: Semak dan papar status data biometrik sedia ada apabila butang Sunting ditekan
+    const statusEl = document.getElementById('status-biometrik');
+    const bioInput = document.getElementById('murid-biometrik');
+    
+    if (s.biometrik_wajah && s.biometrik_wajah.length > 50) {
+        bioInput.value = s.biometrik_wajah;
+        statusEl.innerText = "✅ Wajah sudah didaftarkan dalam sistem.";
+        statusEl.className = "text-[10px] text-center mt-1 font-bold text-emerald-600";
+    } else {
+        bioInput.value = "";
+        statusEl.innerText = "Tiada data biometrik direkodkan.";
+        statusEl.className = "text-[10px] text-center mt-1 text-slate-500 font-medium";
+    }
+
+    // KOD BARU: Sembunyikan butang Simpan Rekod, Tunjukkan butang Kemas Kini & Padam
+    const btnSimpan = document.getElementById('btn-simpan-murid');
+    const btnKumpulan = document.getElementById('kumpulan-butang-sunting');
+    if (btnSimpan) btnSimpan.classList.add('hidden');
+    if (btnKumpulan) btnKumpulan.classList.remove('hidden');
 }
 
         async function saveStudent() {
@@ -2892,7 +2914,7 @@ function deleteAudioLog(logId, studentIc) {
         }
 
 
-        function resetStudentForm() {
+      function resetStudentForm() {
             document.getElementById('murid-index').value = "-1";
             document.getElementById('murid-nama').value = "";
             document.getElementById('murid-ic').value = "";
@@ -2900,8 +2922,21 @@ function deleteAudioLog(logId, studentIc) {
             document.getElementById('murid-kelas').value = "";
             document.getElementById('murid-guru').value = "";
             document.getElementById('murid-img-preview').src = "https://placehold.co/100x100/10b981/ffffff?text=Murid";
-        }
+            
+            // KOD BARU: Kosongkan juga status biometrik wajah apabila borang dikosongkan
+            document.getElementById('murid-biometrik').value = "";
+            const statusEl = document.getElementById('status-biometrik');
+            if (statusEl) {
+                statusEl.innerText = "Tiada data biometrik direkodkan.";
+                statusEl.className = "text-[10px] text-center mt-1 text-slate-500 font-medium";
+            }
 
+            // KOD BARU: Tunjukkan semula butang Simpan Rekod, Sembunyikan butang Kemas Kini & Padam
+            const btnSimpan = document.getElementById('btn-simpan-murid');
+            const btnKumpulan = document.getElementById('kumpulan-butang-sunting');
+            if (btnSimpan) btnSimpan.classList.remove('hidden');
+            if (btnKumpulan) btnKumpulan.classList.add('hidden');
+        }
 
         /* ==========================================================================
            6. CALENDAR & DATE TIME INTEGRATION (TIME-ENGINE)
